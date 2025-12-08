@@ -1,7 +1,7 @@
 import pandas as pd
 import requests
 import json
-from utlis import get_api_entry_by_llm, get_data, merge_by_qid
+from utils import get_api_entry_by_llm, get_data, merge_by_qid
 
 def question_classify(dataset, model):
     question_str = ""
@@ -117,7 +117,7 @@ def question_classify(dataset, model):
     return result
 
 
-def classify(data_path, model_name):
+def classify(data_path, model_name="LLM small"):
     """
     Args:
         data_path (_str_): Path to dataset need classifying
@@ -131,14 +131,32 @@ def classify(data_path, model_name):
 
     BATCH_SIZE_CLASSIFY = 20
     classified_results = []
-    for i in range(0,len(data),BATCH_SIZE_CLASSIFY):
+    
+    print(f'{int(len(data)/BATCH_SIZE_CLASSIFY)} batches')
+    
+    for i in range(0, len(data), BATCH_SIZE_CLASSIFY):
+        print(f'Processing batch {i/BATCH_SIZE_CLASSIFY}')
         if i+BATCH_SIZE_CLASSIFY>len(data):
-            result = question_classify(data[i:len(data)], vnpt_small_model)
+            result = question_classify(data[i:len(data)], vnpt_model)
             classified_results.extend(result)
         else:
-            result = question_classify(data[i:(i+BATCH_SIZE_CLASSIFY)], vnpt_small_model)
+            result = question_classify(data[i:(i+BATCH_SIZE_CLASSIFY)], vnpt_model)
             classified_results.extend(result)
-
 
     classified_data = merge_by_qid(data,classified_results)
     return classified_data
+
+
+if __name__ == "__main__":
+    data_path = r"original_data\val.json"
+    classified = classify(data_path)
+    
+    import os
+    output_folder = "processed_data"
+    output_file = "classified_val.json"
+    output_path = os.path.join(output_folder, output_file)
+
+    os.makedirs(output_folder, exist_ok=True)
+    
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(classified, f, indent=4, ensure_ascii=False)
