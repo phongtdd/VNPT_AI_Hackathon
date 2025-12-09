@@ -53,8 +53,6 @@ class LLMKnowledgeRetriever(LLM_VNPTAI):
             "knowledge": str
         }
         """
-
-        print(question)
         
         output = self.get_single_answer(question)
 
