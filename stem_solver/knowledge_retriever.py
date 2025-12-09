@@ -1,19 +1,32 @@
 import json
 from core.llm_interface import LLM_VNPTAI, get_api_key, get_endpoint
 
-KR_PROMPT = '''
-Bạn là công cụ truy xuất kiến thức.
-Nhiệm vụ: phân tích câu hỏi và quyết định xem có cần kiến thức nền/định lý/định nghĩa hay không.
+KR_PROMPT = """
+Bạn là module LLM Knowledge Retriever cho hệ thống giải STEM.
 
-Nếu không chắc chắn → trả về RỖNG.
-Nếu có → sinh ra kiến thức tối thiểu, gọn, chính xác.
+Nhiệm vụ:
+1. Phân tích câu hỏi.
+2. Quyết định xem có cần sinh Knowledge không.
+3. Nếu cần, hãy tạo:
+   - Bối cảnh toán học / vật lý / dữ kiện nền
+   - Định nghĩa quan trọng
+   - Công thức hoặc định lý liên quan
+   - Các bước giải KHÁI QUÁT (step-by-step outline), nhưng KHÔNG giải bài.
+4. Nếu không cần → trả về knowledge = "".
 
-Output format:
+Yêu cầu quan trọng:
+- Tuyệt đối không giải đề.
+- Chỉ cung cấp kiến thức giúp Python generator hoặc solver dùng được.
+- Ngắn gọn, đúng bản chất, tối đa 10 dòng.
+- Bước gợi ý phải là bước giải tổng quát, không thay số.
+- Output CHỈ JSON:
+
 {
-    "need_knowledge": True/False,
-    "knowledge": "..."
+  "need_knowledge": true/false,
+  "knowledge": "..."
 }
-'''
+
+"""
 
 class LLMKnowledgeRetriever(LLM_VNPTAI):
     def __init__(
@@ -22,7 +35,7 @@ class LLMKnowledgeRetriever(LLM_VNPTAI):
         endpoint=None,
         system_prompt="",
         temperature=0.1,
-        max_completion_tokens=128
+        max_completion_tokens=1000
     ):
         super().__init__(
             model_cfg=model_cfg,
@@ -41,6 +54,8 @@ class LLMKnowledgeRetriever(LLM_VNPTAI):
         }
         """
 
+        print(question)
+        
         output = self.get_single_answer(question)
 
         if not output:
