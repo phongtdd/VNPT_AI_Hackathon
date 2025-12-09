@@ -1,8 +1,12 @@
 import json
 import os
 import requests
+from typing import Literal
 
-def get_api_key(llm_name, path="api-keys.json"):
+def get_api_key(
+    llm_name : Literal["LLM large", "LLM small", "LLM embedings"], 
+    path="api-keys.json"
+    ):
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -76,7 +80,7 @@ class LLM_VNPTAI:
         return response_js["choices"][0]["message"]["content"]
     
 if __name__=="__main__":
-    cfg = get_api_key("LLM large")
+    cfg = get_api_key(llm_name="LLM large")
     endpoint="/v1/chat/completions/vnptai-hackathon-large"
     
     from configs.prompt import SYSTEM_PROMPT
