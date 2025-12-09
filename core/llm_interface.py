@@ -1,9 +1,9 @@
 import json
 import os
 import requests
-from typing import Literal
+from typing import Literal, List
 
-def get_api_key(
+def get_model_config(
     llm_name : Literal["LLM large", "LLM small", "LLM embedings"], 
     path="api-keys.json"
     ):
@@ -18,54 +18,63 @@ def get_api_key(
             return item
 
     return None
+def get_endpoint(
+    llm_name: Literal["LLM large", "LLM small", "LLM embedings"]
+    ): 
+    mapping = {
+        "LLM large": "/v1/chat/completions/vnptai-hackathon-large", 
+        "LLM small": "/v1/chat/completions/vnptai-hackathon-small", 
+        "LLM embedings": None, 
+        } 
+    return mapping.get(llm_name, "")
 
 class LLM_VNPTAI:
     def __init__(
-        self, 
-        model_cfg=None, 
-        endpoint=None, 
+        self,
+        llm_name: Literal["LLM large", "LLM small", "LLM embedings"],
         system_prompt="",
         temperature=0.1,
+        top_p=0.9,
+        top_k=20,
+        n=1,
         max_completion_tokens=64
         ):
-        if not model_cfg:
-            raise ValueError("No model configs")
-        if not endpoint:
-            raise ValueError("No endpoint")
-            
-        self.model_cfg = model_cfg
-        self.endpoint = endpoint
-        self.system_prompt = system_prompt
-        self.temperature = temperature
-        self.max_completion_tokens = max_completion_tokens
-
-    def get_single_answer(self, question):
-        if self.system_prompt:
-            model_input = f"{self.system_prompt}\n\n{question}"
-        else:
-            model_input = question
         
-        headers = {
+        self.model = llm_name.split()[-1].lower()
+        self.model_cfg = get_model_config(llm_name=llm_name)
+        self.endpoint = get_endpoint(llm_name)
+        self.url = f"https://api.idg.vnpt.vn/data-service{self.endpoint}"
+        
+        self.system_prompt = system_prompt
+        
+        self.headers = {
             "Authorization": self.model_cfg["authorization"],
             "Token-id": self.model_cfg["tokenId"],
             "Token-key": self.model_cfg["tokenKey"],
             "Content-Type": "application/json",
         }
+        
+        self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
+        self.n = n
+        self.max_completion_tokens = max_completion_tokens
 
+    def get_single_answer(self, user_prompt: str):
         json_data = {
             "model": "vnptai_hackathon_large",
             "messages": [
-                {"role": "user", "content": model_input},
+                {'role': 'system', 'content': self.system_prompt},
+                {"role": "user", "content": user_prompt},
             ],
             "temperature": self.temperature,
-            "top_p": 0.2,
-            "top_k": 20,
-            "n": 1,
+            "top_p": self.top_p,
+            "top_k": self.top_k,
+            "n": self.n,
             "max_completion_tokens": self.max_completion_tokens,
         }
 
-        url = f"https://api.idg.vnpt.vn/data-service{self.endpoint}"
-        response = requests.post(url, headers=headers, json=json_data)
+        response = requests.post(self.url, headers=self.headers, json=json_data)
 
         if response.status_code != 200:
             print("HTTP Error:", response.status_code, response.text)
@@ -75,20 +84,65 @@ class LLM_VNPTAI:
 
         if "choices" not in response_js:
             print("API Error:", response_js)
-            return "C"
+            return "X"
 
         return response_js["choices"][0]["message"]["content"]
     
-if __name__=="__main__":
-    cfg = get_api_key(llm_name="LLM large")
-    endpoint="/v1/chat/completions/vnptai-hackathon-large"
+def get_batch_answers(self, questions: list[str]):
+    batch_prompt = (
+        "Trả lời lần lượt các câu hỏi dưới đây. "
+        "Phản hồi DUY NHẤT dưới dạng JSON với format:\n"
+        "{ 'answers': [ ... ] }\n\n"
+        "Các câu hỏi:\n"
+    )
+    for i, q in enumerate(questions, 1):
+        batch_prompt += f"{i}. {q}\n"
+
+    json_data = {
+        "model": "vnptai_hackathon_large",
+        "messages": [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": batch_prompt},
+        ],
+        "temperature": self.temperature,
+        "top_p": self.top_p,
+        "top_k": self.top_k,
+        "n": 1,
+        "max_completion_tokens": self.max_completion_tokens,
+    }
+
+    response = requests.post(self.url, headers=self.headers, json=json_data)
+
+    if response.status_code != 200:
+        print("HTTP Error:", response.status_code, response.text)
+        return ["X"] * len(questions)
+
+    response_js = response.json()
+
+    if "choices" not in response_js:
+        print("API Error:", response_js)
+        return ["X"] * len(questions)
+
+    text = response_js["choices"][0]["message"]["content"]
+
+    # Parse JSON output
+    import json
+    try:
+        ans = json.loads(text)
+        return ans["answers"]
+    except:
+        print("Parse error:", text)
+        return ["X"] * len(questions)
     
-    from configs.prompt import SYSTEM_PROMPT
+    
+if __name__=="__main__":
+    llm_name = "LLM small"
+    
+    from configs.prompt import MAIN_SYSTEM_PROMPT
     
     llm = LLM_VNPTAI(
-        model_cfg=cfg,
-        endpoint=endpoint,
-        system_prompt=SYSTEM_PROMPT
+        llm_name=llm_name,
+        system_prompt=MAIN_SYSTEM_PROMPT
     )
 
     question = '''
@@ -100,5 +154,5 @@ if __name__=="__main__":
     "Từ chối tiếp xúc với cán bộ"
     '''
     
-    answer = llm.get_single_answer(question=question)
+    answer = llm.get_single_answer(user_prompt=question)
     print(answer)
