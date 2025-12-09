@@ -1,4 +1,13 @@
-*.json
+api-keys.json
 *.csv
+*ipynb
 *.pdf
 __pycache__
+__init__.py
+*.pyc
+*.pkl
+*.log
+.DS_Store
+.vscode
+*.json
+*.txt
