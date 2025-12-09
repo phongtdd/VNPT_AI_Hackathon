@@ -133,10 +133,10 @@ def classify(data_path, model_name):
     classified_results = []
     for i in range(0,len(data),BATCH_SIZE_CLASSIFY):
         if i+BATCH_SIZE_CLASSIFY>len(data):
-            result = question_classify(data[i:len(data)], vnpt_small_model)
+            result = question_classify(data[i:len(data)], vnpt_model)
             classified_results.extend(result)
         else:
-            result = question_classify(data[i:(i+BATCH_SIZE_CLASSIFY)], vnpt_small_model)
+            result = question_classify(data[i:(i+BATCH_SIZE_CLASSIFY)], vnpt_model)
             classified_results.extend(result)
 
 
