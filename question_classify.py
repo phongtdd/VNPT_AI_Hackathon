@@ -130,7 +130,8 @@ def question_classify(dataset, model):
             'top_p': 1.0, 
             'top_k': 0, 
             'n': 1, 
-            'max_completion_tokens': 512
+            'max_completion_tokens': 512,
+            'seed': 1
         }
     endpoint = "/v1/chat/completions/vnptai-hackathon-small"
     response = requests.post(f'https://api.idg.vnpt.vn/data-service{endpoint}', headers=headers, json=json_data) 
