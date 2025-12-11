@@ -33,7 +33,6 @@ class LLMStem(LLM_VNPTAI):
 
     def post_process(self, output: str):
         # Ensure output is in valid JSON format
-        print(output)
         s = output.split("PHASE 2 — FINAL OUTPUT")[-1].strip()
         
         original = s
