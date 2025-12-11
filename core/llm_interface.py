@@ -19,6 +19,7 @@ class LLM_VNPTAI:
         top_k=20,
         n=1,
         max_completion_tokens=64,
+        seed=42,
     ):
         self.model = llm_name.split()[-1].lower()
         self.model_cfg = get_model_config(llm_name=llm_name)
@@ -39,6 +40,7 @@ class LLM_VNPTAI:
         self.top_k = top_k
         self.n = n
         self.max_completion_tokens = max_completion_tokens
+        self.seed = seed
 
     def get_single_answer(self, user_prompt: str):
         json_data = {
@@ -54,7 +56,7 @@ class LLM_VNPTAI:
             "top_k": self.top_k,
             "n": self.n,
             "max_completion_tokens": self.max_completion_tokens,
-            "seed": 42,
+            "seed": self.seed,
         }
 
         response = requests.post(self.url, headers=self.headers, json=json_data)
@@ -92,7 +94,7 @@ class LLM_VNPTAI:
             "top_k": self.top_k,
             "n": 1,
             "max_completion_tokens": self.max_completion_tokens,
-            "seed": 42,
+            "seed": self.seed,
         }
 
         response = requests.post(self.url, headers=self.headers, json=json_data)
@@ -126,7 +128,9 @@ class LLM_VNPTAI:
             user_prompt = general_prompt(ex)
         answer = self.get_single_answer(user_prompt)
         return answer
-
+    
+    def post_process(self, output: str):
+        pass
 
 class Embedding_VNPTAI:
     def __init__(
