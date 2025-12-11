@@ -29,25 +29,36 @@ class LLMStem(LLM_VNPTAI):
 
     def get_single_answer(self, question_with_choices: str) -> str:
         output = super().get_single_answer(question_with_choices)
+        return self.post_process(output)
 
-        code_block = re.findall(r"```json(.*?)```", output, flags=re.DOTALL)
-        if code_block:
-            block = code_block[-1].strip()
-            try:
-                return json.loads(block)
-            except:
-                pass
+    def post_process(self, output: str):
+        # Ensure output is in valid JSON format
+        print(output)
+        s = output.split("PHASE 2 — FINAL OUTPUT")[-1].strip()
+        
+        original = s
+        match = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', s)
+        if match:
+            s = match.group(0)
 
-        json_match = re.findall(r"(\[\s*\{.*?\}\s*\])", output, flags=re.DOTALL)
-        if json_match:
-            block = json_match[-1]
-            try:
-                return json.loads(block)
-            except:
-                pass
+        s = s.replace("“", "\"").replace("”", "\"").replace("‘", "\"").replace("’", "\"")
 
-        raise ValueError("Không tìm thấy JSON hợp lệ trong output LLM.")
+        s = re.sub(r',\s*([\]}])', r'\1', s)
 
+        s = re.sub(r'(\{|,)\s*([A-Za-z0-9_]+)\s*:', r'\1 "\2":', s)
+
+        s = re.sub(r'"answer":\s*([A-Za-z])', r'"answer": "\1"', s)
+
+        s = s.replace("}{", "},{")
+
+        try:
+            return json.loads(s)
+        except Exception as e:
+            print("Parse still failed. Input:")
+            print(original)
+            print("After auto-fix:")
+            print(s)
+            raise e
 
 if __name__ == "__main__":
     llm_name = "LLM small"
