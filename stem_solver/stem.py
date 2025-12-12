@@ -3,19 +3,20 @@ import re
 from typing import Literal
 
 from core.llm_interface import LLM_VNPTAI
+from core.answer_extracter import LLM_AnswerExtractor
 from prompt.agent_prompt import STEM_PROMPT
 
 
 class LLMStem(LLM_VNPTAI):
     def __init__(
         self,
-        llm_name: Literal["LLM large", "LLM small", "LLM embedings"],
+        llm_name: Literal["LLM large", "LLM small"],
         system_prompt="",
         temperature=0.1,
         top_p=1.0,
         top_k=0,
         n=1,
-        max_completion_tokens=1000,
+        max_completion_tokens=2048,
     ):
         super().__init__(
             llm_name=llm_name,
@@ -36,6 +37,7 @@ class LLMStem(LLM_VNPTAI):
         s = output.split("PHASE 2 — FINAL OUTPUT")[-1].strip()
         
         original = s
+        
         match = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', s)
         if match:
             s = match.group(0)
@@ -55,9 +57,11 @@ class LLMStem(LLM_VNPTAI):
         except Exception as e:
             print("Parse still failed. Input:")
             print(original)
-            print("After auto-fix:")
-            print(s)
-            raise e
+            print("Smart parsing")
+            answer_extractor_llm = LLM_AnswerExtractor()
+            answer = answer_extractor_llm.get_single_answer(output)
+            print(answer)
+            return [{'qid': 'q1', 'answer': answer}]
 
 if __name__ == "__main__":
     llm_name = "LLM small"
@@ -91,4 +95,5 @@ if __name__ == "__main__":
     result = stem_llm.get_single_answer(full_input)
 
     print(type(result))
+    print(result)
     print(result[0]["answer"])
