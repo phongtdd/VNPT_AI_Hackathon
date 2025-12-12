@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from core.llm_interface import LLM_VNPTAI
 from post_processing import choice_to_letter
-from prompt.agent_prompt import KR_PROMPT, RAG_PROMPT
+from prompt.agent_prompt import STEM_PROMPT, RAG_PROMPT
 from stem_solver.stem import LLMStem
 from utils.helper import get_data
 
@@ -86,7 +86,7 @@ def run_stem_inference(
 
     stem_llm = LLMStem(
         llm_name=llm_name,
-        system_prompt=KR_PROMPT,
+        system_prompt=STEM_PROMPT,
         temperature=0.0,
         top_p=1.0,
         top_k=0,
