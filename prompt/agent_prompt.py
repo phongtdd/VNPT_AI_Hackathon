@@ -106,7 +106,7 @@ Dựa trên các thông tin sau được cung cấp trong thẻ <INFORMATION>, h
 output:
 """
 
-KR_PROMPT = """
+STEM_PROMPT = """
 PHASE 1 — EXTERNAL REASONING (HIỂN THỊ BƯỚC GIẢI)
 ====================================================
 Bạn là mô hình chuyên gia giải các bài toán STEM (Toán, Lý, Hóa, Sinh, Thống kê, Công nghệ, Kinh tế học kỹ thuật).

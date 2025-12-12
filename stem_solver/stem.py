@@ -3,7 +3,7 @@ import re
 from typing import Literal
 
 from core.llm_interface import LLM_VNPTAI
-from prompt.agent_prompt import KR_PROMPT
+from prompt.agent_prompt import STEM_PROMPT
 
 
 class LLMStem(LLM_VNPTAI):
@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
     stem_llm = LLMStem(
         llm_name=llm_name,
-        system_prompt=KR_PROMPT,
+        system_prompt=STEM_PROMPT,
         temperature=0.0,
         top_p=1.0,
         top_k=0,
