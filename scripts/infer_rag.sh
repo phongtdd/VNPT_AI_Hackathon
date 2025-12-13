@@ -4,8 +4,9 @@ set -x
 
 
 python3 -m RAG.infer \
-    --input data/val.json \
-    --output prediction/val_rag.csv \
-    --llm "LLM small" \
-    --start 0 \
+    --input data/test.json \
+    --output prediction/test_rag_40_200_1.csv \
+    --llm "LLM large" \
+    --start 40 \
     --end 200 \
+    --use_sim

@@ -3,7 +3,6 @@ api-keys.json
 *ipynb
 *.pdf
 __pycache__
-__init__.py
 *.pyc
 *.pkl
 *.log
@@ -11,3 +10,7 @@ __init__.py
 .vscode
 *.json
 *.txt
+Wiki/chunks/*
+Wiki/data/*
+Wiki/extracted/*
+Wiki/processed_docs/*

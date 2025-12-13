@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from core.llm_interface import LLM_VNPTAI
 from post_processing import choice_to_letter
-from prompt.agent_prompt import STEM_PROMPT, RAG_PROMPT
+from prompt.agent_prompt import KR_PROMPT, PR_SYSTEM_PROMPT, SYSTEM_RAG_PROMPT
 from stem_solver.stem import LLMStem
 from utils.helper import get_data
 
@@ -19,7 +19,7 @@ def run_inference(test_path, output_path, llm_name, sleep_time=0.1):
     with open(output_path, "w", encoding="utf-8") as f:
         iterator = tqdm(enumerate(test_data), total=len(test_data))
         for i, test_case in iterator:
-            llm = LLM_VNPTAI(llm_name=llm_name, system_prompt=RAG_PROMPT)
+            llm = LLM_VNPTAI(llm_name=llm_name, system_prompt=SYSTEM_RAG_PROMPT)
             answer = llm.predict(test_case, question_type="RAG")
             f.write(f"{test_case['qid'], answer}\n")
 
@@ -44,7 +44,7 @@ def run_rag_inference(
         rag_data = rag_data[start:end]
     else:
         rag_data = rag_data[:end]
-    llm = LLM_VNPTAI(llm_name=llm_name, system_prompt=RAG_PROMPT)
+    llm = LLM_VNPTAI(llm_name=llm_name, system_prompt=SYSTEM_RAG_PROMPT)
     with open(output_path, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["qid", "answer"])
@@ -122,6 +122,47 @@ def run_stem_inference(
     print(f"Predictions saved to {output_path}")
 
 
+def run_pr_inference(
+    test_data_path, output_path, llm_name, start: int, end: int = 40, sleep_time=0.1
+):
+    filename = os.path.basename(test_data_path).lower()
+
+    if "val" in filename:
+        mode = "v"
+    else:
+        mode = "t"
+
+    test_data = get_data(test_data_path)
+    pr_data = [
+        item for item in test_data if item.get("label", "") == "Precision-Critical"
+    ]
+    if start > 0:
+        pr_data = pr_data[start:end]
+    else:
+        pr_data = pr_data[:end]
+    llm = LLM_VNPTAI(llm_name=llm_name, system_prompt=PR_SYSTEM_PROMPT)
+    with open(output_path, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["qid", "answer"])
+        iterator = tqdm(enumerate(pr_data), total=len(pr_data))
+        for i, test_case in iterator:
+            try:
+                raw_answer = llm.predict(test_case)
+                letter_answer = choice_to_letter(raw_answer, test_case["choices"])
+            except Exception as e:
+                print(f"Error processing qid {test_case['qid']}: {e}")
+                letter_answer = ""
+            if mode == "v":
+                writer.writerow([test_case["qid"], letter_answer, test_case["answer"]])
+            else:
+                writer.writerow([test_case["qid"], letter_answer])
+
+            if sleep_time:
+                time.sleep(sleep_time)
+
+    print(f"CSV saved to {output_path}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Path to test dataset JSON")
@@ -140,6 +181,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # run_rag_inference(args.input, args.output, args.llm, start=args.start, end=args.end)
-    run_stem_inference(
-        args.input, args.output, args.llm, start=args.start, end=args.end
-    )
+    # run_stem_inference(
+    #     args.input, args.output, args.llm, start=args.start, end=args.end
+    # )
+    run_pr_inference(args.input, args.output, args.llm, start=args.start, end=args.end)

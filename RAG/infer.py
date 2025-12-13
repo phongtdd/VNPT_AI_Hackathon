@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from core.llm_interface import LLM_VNPTAI
 from post_processing import choice_to_letter
-from prompt.agent_prompt import RAG_PROMPT, USER_RAG_PROMPT
+from prompt.agent_prompt import SYSTEM_RAG_PROMPT, USER_RAG_PROMPT
 from RAG.get_top_param import top_similarity
 from utils.helper import get_data
 
@@ -34,7 +34,9 @@ def run_rag_inference(
     ]
     if start > 0:
         rag_data = rag_data[start:end]
-    llm = LLM_VNPTAI(llm_name=llm_name, system_prompt=RAG_PROMPT)
+    else:
+        rag_data = rag_data[:end]
+    llm = LLM_VNPTAI(llm_name=llm_name, system_prompt=SYSTEM_RAG_PROMPT)
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if mode == "v":
