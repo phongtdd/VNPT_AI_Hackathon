@@ -3,9 +3,8 @@ set -e
 set -x
 
 
-python3 infer.py \
-    --input processed_data/classified_test.json \
-    --output prediction/test_pr_1.csv \
-    --llm "LLM large" \
-    --start 0 \
-    --end 200
+python3 inference.py \
+    --input data/test.json \
+    --separated_dir data/separated_data \
+    --output data/prediction.csv \
+    --llm "LLM large"

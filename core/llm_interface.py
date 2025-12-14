@@ -14,14 +14,14 @@ from utils.get_config import get_endpoint, get_model_config
 class LLM_VNPTAI:
     def __init__(
         self,
-        llm_name: Literal["LLM large", "LLM small", "LLM embedings"],
-        system_prompt="",
-        temperature=0.1,
-        top_p=0.9,
-        top_k=20,
-        n=1,
-        max_completion_tokens=64,
-        seed=42,
+        llm_name: Literal["LLM large", "LLM small"],
+        system_prompt: str = "",
+        temperature: float = 0.1,
+        top_p: float = 0.9,
+        top_k: int = 20,
+        n: int = 1,
+        max_completion_tokens: int = 64,
+        seed: int = 42,
     ):
         self.model = llm_name.split()[-1].lower()
         self.model_cfg = get_model_config(llm_name=llm_name)

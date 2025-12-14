@@ -1,10 +1,10 @@
-from prompt.agent_prompt import GENERAL_PROMPT, USER_RAG_PROMPT
+from prompt.agent_prompt import GENERAL_USER_PROMPT, USER_RAG_PROMPT
 
 
 def general_prompt(ex: dict[str, str]):
     questions = ex["question"]
     choices = ex["choices"]
-    user_prompt = GENERAL_PROMPT.format(questions=questions, choices=choices)
+    user_prompt = GENERAL_USER_PROMPT.format(questions=questions, choices=choices)
 
     return user_prompt
 

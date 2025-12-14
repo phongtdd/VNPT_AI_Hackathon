@@ -8,7 +8,12 @@ from tqdm import tqdm
 
 from core.llm_interface import LLM_VNPTAI
 from post_processing import choice_to_letter
-from prompt.agent_prompt import KR_PROMPT, PR_SYSTEM_PROMPT, SYSTEM_RAG_PROMPT
+from prompt.agent_prompt import (
+    AE_PROMPT,
+    GENERAL_SYSTEM_PROMPT,
+    PR_SYSTEM_PROMPT,
+    SYSTEM_RAG_PROMPT,
+)
 from stem_solver.stem import LLMStem
 from utils.helper import get_data
 
@@ -163,6 +168,32 @@ def run_pr_inference(
     print(f"CSV saved to {output_path}")
 
 
+def run_inference(test_path, output_path, llm_name, batch_size=40, sleep_seconds=3600):
+    test_data = get_data(test_path)
+    llm = LLM_VNPTAI(llm_name=llm_name, system_prompt=GENERAL_SYSTEM_PROMPT)
+    with open(output_path, "w", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["qid", "answer"])
+        iterator = tqdm(enumerate(test_data), total=len(test_data))
+
+        for i, test_case in iterator:
+            try:
+                answer = llm.predict(test_case, question_type="Other")
+            except Exception as e:
+                answer = f"ERROR: {e}"
+            writer.writerow([test_case["qid"], answer])
+            f.flush()  # ensure results are saved immediately
+
+            # Sleep after every batch_size questions (except the last batch)
+            if (i + 1) % batch_size == 0 and (i + 1) < len(test_data):
+                iterator.set_description(
+                    f"Processed {i + 1}/{len(test_data)} — sleeping 1 hour"
+                )
+                time.sleep(sleep_seconds)
+
+    print(f"Predictions saved to {output_path}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Path to test dataset JSON")
@@ -184,4 +215,5 @@ if __name__ == "__main__":
     # run_stem_inference(
     #     args.input, args.output, args.llm, start=args.start, end=args.end
     # )
-    run_pr_inference(args.input, args.output, args.llm, start=args.start, end=args.end)
+    # run_pr_inference(args.input, args.output, args.llm, start=args.start, end=args.end)
+    run_inference(args.input, args.output, args.llm, batch_size=40, sleep_seconds=3600)
