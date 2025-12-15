@@ -1,5 +1,4 @@
 api-keys.json
-*.csv
 *ipynb
 *.pdf
 __pycache__
@@ -14,4 +13,5 @@ Wiki/chunks/*
 Wiki/data/*
 Wiki/extracted/*
 Wiki/processed_docs/*
+prediction/*
 *.jsonl

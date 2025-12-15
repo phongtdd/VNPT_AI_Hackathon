@@ -29,5 +29,6 @@ LABEL_REGISTRY: dict[str, dict[str, str]] = {
         "system_prompt": GENERAL_SYSTEM_PROMPT,
         "question_type": "Multi-Domain",
         "postprocess": "choice_to_letter",
+        "tool_use": "multi_domain",
     },
 }

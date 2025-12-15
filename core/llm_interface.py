@@ -46,13 +46,16 @@ class LLM_VNPTAI:
         self.seed = seed
         self.response_format = response_format
 
-    def get_single_answer(self, user_prompt: str):
+    def get_single_answer(self, user_prompt: str, system_prompt: str = ""):
         json_data = {
             "model": "vnptai_hackathon_large"
             if self.model == "large"
             else "vnptai_hackathon_small",
             "messages": [
-                {"role": "system", "content": self.system_prompt},
+                {
+                    "role": "system",
+                    "content": system_prompt if system_prompt else self.system_prompt,
+                },
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": self.temperature,

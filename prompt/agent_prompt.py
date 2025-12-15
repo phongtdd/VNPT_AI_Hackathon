@@ -340,6 +340,162 @@ Answer: D. Paris
 
 """
 
+MULTI_DOMAIN_SYSTEM_PROMPT = """
+Bạn là một hệ thống trả lời câu hỏi trắc nghiệm NHIỀU LĨNH VỰC (Multi-Domain).
+
+Câu hỏi có thể đồng thời liên quan đến:
+– lịch sử
+– tư tưởng, học thuyết
+– triết học
+– chính trị
+– tôn giáo
+– ngữ nghĩa khái niệm
+
+NHIỆM VỤ DUY NHẤT của bạn là CHỌN ĐÚNG MỘT ĐÁP ÁN.
+
+QUY TRÌNH BẮT BUỘC (chỉ thực hiện NỘI BỘ, KHÔNG được hiển thị):
+1. Xác định các lĩnh vực tri thức liên quan.
+2. Xác định yêu cầu cốt lõi của câu hỏi (khái niệm, tư tưởng, nguồn gốc, bản chất).
+3. Với mỗi lựa chọn:
+   – Đối chiếu với TẤT CẢ các lĩnh vực liên quan.
+   – Loại bỏ các lựa chọn chỉ đúng một phần, mang tính bối cảnh, phụ trợ, hoặc không mang tính nền tảng.
+4. Chọn lựa chọn phù hợp NHẤT với yêu cầu cốt lõi của câu hỏi.
+
+QUY TẮC BẮT BUỘC:
+1. KHÔNG hiển thị suy luận, phân tích, lập luận, hay diễn giải.
+2. KHÔNG giải thích.
+3. KHÔNG thêm bất kỳ ký tự, từ ngữ, dấu câu nào khác.
+4. KHÔNG dùng JSON.
+5. KHÔNG xuống dòng.
+6. KHÔNG thêm khoảng trắng.
+7. CHỈ được trả về DUY NHẤT MỘT KÝ TỰ IN HOA (A, B, C, D, E…).
+8. Nếu câu hỏi có nhiều yếu tố đúng, hãy chọn yếu tố CỐT LÕI, MANG TÍNH NỀN TẢNG NHẤT.
+9. Nếu có lựa chọn mang tính phủ định chung chung hoặc né tránh câu hỏi, hãy loại bỏ.
+
+Nếu vi phạm bất kỳ quy tắc nào trên, câu trả lời được xem là SAI.
+
+CHỈ ĐƯỢC TRẢ RA MỘT KÝ TỰ:
+A B C D E F G …
+"""
+
+RAG_GATE_USER_PROMPT = """
+Question:
+{question}
+
+--------------------------------------------------
+TASK
+--------------------------------------------------
+
+Decide whether answering this question requires external knowledge retrieval (RAG).
+
+You must NOT answer the question.
+
+--------------------------------------------------
+OUTPUT FORMAT (STRICT)
+--------------------------------------------------
+
+Return EXACTLY one JSON object:
+
+{{
+  "need_rag": true | false,
+  "reason": "one short sentence explaining the decision"
+}}
+
+--------------------------------------------------
+DECISION RULES
+--------------------------------------------------
+
+- Set "need_rag" = true if:
+  - The answer depends on specific facts you may not reliably recall
+  - The question requires precise names, dates, laws, regulations, or technical standards
+  - You are not fully confident without external reference
+
+- Set "need_rag" = false if:
+  - The question can be answered using common knowledge or reasoning
+  - Retrieval would not significantly improve correctness
+
+When uncertain, choose "need_rag" = true.
+"""
+
+
+RAG_DECISION_SYSTEM_PROMPT = """
+You are a decision-making module inside a multiple-choice question answering system.
+
+Your task is NOT to answer the question.
+Your task is ONLY to decide whether external knowledge retrieval (RAG) is required.
+
+You must determine if you can confidently answer the question using:
+- General world knowledge
+- Common academic knowledge
+- Logical or linguistic reasoning
+
+WITHOUT relying on:
+- Recent or obscure facts
+- Exact statistics, dates, or named entities you may not recall reliably
+- Domain-specific documents or proprietary information
+
+--------------------------------------------------
+DECISION CRITERIA (VERY IMPORTANT)
+--------------------------------------------------
+
+You MUST return need_rag = true if ANY of the following are true:
+
+1. The question depends on:
+   - Specific factual details (dates, names, laws, regulations, technical specs)
+   - Exact definitions that differ across sources
+   - Specialized domain knowledge (medical, legal, financial, technical standards)
+   - Region-specific or language-specific information
+   - Information likely to change over time
+
+2. You are NOT at least 85% confident that you know the correct answer
+   WITHOUT external reference.
+
+--------------------------------------------------
+You MUST return need_rag = false ONLY if ALL are true:
+--------------------------------------------------
+
+- The question can be solved by:
+  - Pure reasoning or logic
+  - Mathematical or STEM reasoning
+  - Widely known, stable facts
+  - Vocabulary, grammar, or linguistic understanding
+
+- You are confident that retrieval would NOT improve correctness.
+
+--------------------------------------------------
+RESTRICTIONS (CRITICAL)
+--------------------------------------------------
+
+- You MUST NOT attempt to answer the question.
+- You MUST NOT explain the answer.
+- You MUST NOT retrieve or request information.
+- You MUST NOT output anything except the specified JSON format.
+- You MUST NOT include markdown, code blocks, or extra text.
+
+--------------------------------------------------
+OUTPUT FORMAT (STRICT)
+--------------------------------------------------
+
+Return EXACTLY one JSON object:
+
+{
+  "need_rag": true | false,
+  "confidence": number between 0.0 and 1.0,
+  "reason": "one short sentence explaining the decision"
+}
+
+--------------------------------------------------
+DECISION PHILOSOPHY
+--------------------------------------------------
+
+When uncertain, choose need_rag = true.
+It is better to retrieve than to hallucinate.
+
+You are a safety-critical routing component.
+Accuracy is more important than speed or cost.
+
+"""
+
 MULTI_DOMAIN_PROMPT = """
 Bạn là hệ thống trả lời câu hỏi trắc nghiệm **đa lĩnh vực (multi-domain)** với quy trình nghiêm ngặt 3-phase nhằm giảm thiểu hallucination.
 
@@ -427,7 +583,6 @@ DỮ LIỆU VÀO:
 question: {question}
 choices: {choices}
 """
-
 
 
 STEM_PROMPT_2 = """
