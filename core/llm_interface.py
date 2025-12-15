@@ -1,4 +1,5 @@
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Literal
 
 import numpy as np
@@ -7,8 +8,6 @@ from tqdm import tqdm
 
 from prompt.utils import general_prompt, rag_prompt
 from utils.get_config import get_endpoint, get_model_config
-
-# ~0.12s
 
 
 class LLM_VNPTAI:
@@ -232,3 +231,103 @@ class Embedding_VNPTAI:
             time.sleep(self.SLEEP_TIME)
 
         return np.array(all_embeddings, dtype="float32")
+
+
+class Embedding_VNPTAI:
+    def __init__(self, embedding_name="LLM embedings", max_workers=4):
+        self.model_cfg = get_model_config(llm_name=embedding_name)
+        self.endpoint = get_endpoint(embedding_name)
+        self.url = f"https://api.idg.vnpt.vn/data-service{self.endpoint}"
+
+        self.headers = {
+            "Authorization": self.model_cfg["authorization"],
+            "Token-id": self.model_cfg["tokenId"],
+            "Token-key": self.model_cfg["tokenKey"],
+            "Content-Type": "application/json",
+        }
+
+        # ===== Embedding limits =====
+        self.MAX_TOKENS = 7500
+        self.CHAR_PER_TOKEN = 4
+        self.max_workers = max_workers
+
+    def _estimate_tokens(self, text: str) -> int:
+        return max(1, len(text) // self.CHAR_PER_TOKEN)
+
+    def _embed_batch(self, batch: list[str], max_retries: int = 5):
+        for attempt in range(1, max_retries + 1):
+            try:
+                r = requests.post(
+                    self.url,
+                    headers=self.headers,
+                    json={
+                        "model": "vnptai_hackathon_embedding",
+                        "input": batch,
+                    },
+                    timeout=60,
+                )
+
+                if r.status_code == 429:
+                    raise RuntimeError("Rate limited")
+
+                if r.status_code != 200:
+                    raise RuntimeError(r.text)
+
+                data = r.json().get("data")
+                if not data:
+                    raise RuntimeError("Invalid response")
+
+                return [item["embedding"] for item in data]
+
+            except Exception as e:
+                if attempt == max_retries:
+                    raise
+                time.sleep(2**attempt)
+
+    def get_embedding(self, text: str) -> list[float]:
+        json_data = {
+            "model": "vnptai_hackathon_embedding",
+            "input": text,
+        }
+
+        response = requests.post(self.url, headers=self.headers, json=json_data)
+
+        if response.status_code != 200:
+            print("HTTP Error:", response.status_code, response.text)
+            return []
+
+        response_js = response.json()
+
+        if "data" not in response_js:
+            print("API Error:", response_js)
+            return []
+
+        return response_js["data"][0]["embedding"]
+
+    def embed_texts(self, texts: list[str]) -> np.ndarray:
+        """
+        Token-aware + parallel embedding
+        """
+        batches = []
+        batch, tokens = [], 0
+
+        for t in texts:
+            est = self._estimate_tokens(t)
+            if batch and tokens + est > self.MAX_TOKENS:
+                batches.append(batch)
+                batch, tokens = [], 0
+
+            batch.append(t)
+            tokens += est
+
+        if batch:
+            batches.append(batch)
+
+        results = []
+        with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
+            futures = [pool.submit(self._embed_batch, b) for b in batches]
+
+            for f in tqdm(as_completed(futures), total=len(futures), desc="Embedding"):
+                results.extend(f.result())
+
+        return np.asarray(results, dtype="float32")
