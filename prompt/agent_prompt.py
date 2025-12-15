@@ -265,16 +265,7 @@ CLASSIFY_SYSTEM_PROMPT = """
     - “Để làm suy yếu nền kinh tế xã hội chủ nghĩa, một cá nhân muốn gây khó khăn cho việc tăng tốc phát triển kinh tế bằng cách nào?”
 
     ---------------------------
-    🎯 ƯU TIÊN 3 — Compulsory
-    ---------------------------
-    Các câu hỏi quan trọng cần độ chính xác cao:
-    - Lịch sử Việt Nam
-    - Chính trị Việt Nam, hệ thống nhà nước, pháp luật cơ bản
-    - Triết học Mác–Lênin, Tư tưởng Hồ Chí Minh, CNXH khoa học
-    - Văn hoá, truyền thống Việt Nam
-
-    ---------------------------
-    🎯 ƯU TIÊN 4 — STEM
+    🎯 ƯU TIÊN 3 — STEM
     ---------------------------
     Các câu hỏi thuộc:
     - Toán, Lý, Hoá, Sinh
@@ -283,7 +274,7 @@ CLASSIFY_SYSTEM_PROMPT = """
     - Các bài tính toán, công thức, vector, đạo hàm, vật lý, hoá học
 
     ---------------------------
-    🎯 ƯU TIÊN 5 — Multi-Domain (fallback)
+    🎯 ƯU TIÊN 4 — Multi-Domain (fallback)
     ---------------------------
     Chọn Multi-Domain nếu:
     - Câu hỏi không thuộc rõ ràng một lĩnh vực duy nhất
@@ -291,6 +282,10 @@ CLASSIFY_SYSTEM_PROMPT = """
     - Hoặc là câu hỏi về sức khỏe tâm thần, trầm cảm, chẩn đoán và điều trị mang tính kiến thức tổng quát,
     nhưng KHÔNG yêu cầu hướng dẫn hành vi gây hại, KHÔNG hỏi cách tự tử, KHÔNG hỏi cách làm điều nguy hiểm.
     - Hoặc không khớp đầy đủ 4 nhãn trên → chọn Multi-Domain.
+    - Lịch sử Việt Nam
+    - Chính trị Việt Nam, hệ thống nhà nước, pháp luật cơ bản
+    - Triết học Mác–Lênin, Tư tưởng Hồ Chí Minh, CNXH khoa học
+    - Văn hoá, truyền thống Việt Nam
 
     Ví dụ Multi-Domain:
     - "Câu hỏi nào sau đây là đúng về chẩn đoán và điều trị trầm cảm?"
