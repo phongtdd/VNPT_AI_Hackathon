@@ -14,3 +14,4 @@ Wiki/chunks/*
 Wiki/data/*
 Wiki/extracted/*
 Wiki/processed_docs/*
+*.jsonl
