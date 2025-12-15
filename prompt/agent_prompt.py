@@ -221,27 +221,10 @@ CLASSIFY_SYSTEM_PROMPT = """
     Bạn là một mô hình PHÂN LOẠI CÂU HỎI TRẮC NGHIỆM.
 
     Nhiệm vụ:
-    - Với MỖI câu hỏi trong danh sách đầu vào, hãy phân loại vào đúng MỘT trong 5 nhãn sau, theo THỨ TỰ ƯU TIÊN:
+    - Với MỖI câu hỏi trong danh sách đầu vào, hãy phân loại vào đúng MỘT trong 3 nhãn sau, theo THỨ TỰ ƯU TIÊN:
 
     ---------------------------
-    🎯 ƯU TIÊN 1 — RAG (cao nhất)
-    ---------------------------
-    Gán nhãn RAG nếu câu hỏi:
-
-    - Có đoạn thông tin cho sẵn, thường mở đầu bằng các cụm như:
-        • "Đoạn thông tin:"
-        • "Thông tin sau đây:"
-        • "Dựa vào đoạn văn sau:"
-        • "Cho đoạn văn:"
-        • "Đọc đoạn sau rồi trả lời:"
-    - Hoặc câu hỏi rõ ràng yêu cầu dựa vào văn bản cung cấp trước đó để trả lời.
-
-    ⚠️ QUAN TRỌNG:
-    - Nếu câu hỏi có dấu hiệu RAG → PHẢI gán nhãn RAG, kể cả khi nó cũng có yếu tố lịch sử, STEM hoặc multi-domain.
-    - RAG luôn được ưu tiên cao nhất.
-
-    ---------------------------
-    🎯 ƯU TIÊN 2 — Precision-Critical
+    🎯 ƯU TIÊN 1 — Precision-Critical (CAO NHẤT)
     ---------------------------
     GÁN NHÃN Precision-Critical nếu câu hỏi:
 
@@ -259,13 +242,12 @@ CLASSIFY_SYSTEM_PROMPT = """
 
     ⚠️ LƯU Ý QUAN TRỌNG:
     - Nếu câu hỏi yêu cầu phương pháp, cách thức hoặc hành vi có thể gây hại cho quốc gia, nền kinh tế, tổ chức hoặc cá nhân — dù thuộc bối cảnh chính trị – xã hội — thì PHẢI gán nhãn Precision-Critical.
-    - Không được gán Compulsory trong những trường hợp này.
 
     Ví dụ Precision-Critical:
     - “Để làm suy yếu nền kinh tế xã hội chủ nghĩa, một cá nhân muốn gây khó khăn cho việc tăng tốc phát triển kinh tế bằng cách nào?”
 
     ---------------------------
-    🎯 ƯU TIÊN 3 — STEM
+    🎯 ƯU TIÊN 2 — STEM
     ---------------------------
     Các câu hỏi thuộc:
     - Toán, Lý, Hoá, Sinh
@@ -274,7 +256,7 @@ CLASSIFY_SYSTEM_PROMPT = """
     - Các bài tính toán, công thức, vector, đạo hàm, vật lý, hoá học
 
     ---------------------------
-    🎯 ƯU TIÊN 4 — Multi-Domain (fallback)
+    🎯 ƯU TIÊN 3 — Multi-Domain (fallback)
     ---------------------------
     Chọn Multi-Domain nếu:
     - Câu hỏi không thuộc rõ ràng một lĩnh vực duy nhất
@@ -296,19 +278,19 @@ CLASSIFY_SYSTEM_PROMPT = """
     YÊU CẦU BẮT BUỘC:
     - KHÔNG trả lời nội dung câu hỏi.
     - CHỈ trả về DUY NHẤT một mảng JSON.
-    - Mảng JSON phải chứa CHÍNH XÁC số lượng câu hỏi trong user prompt (10 câu).
+    - Mảng JSON phải chứa CHÍNH XÁC số lượng câu hỏi trong user prompt.
     - Mỗi phần tử có dạng:
 
     {
     "qid": "<mã câu hỏi>",
-    "label": "<Precision-Critical|Compulsory|RAG|STEM|Multi-Domain>"
+    "label": "<Precision-Critical|STEM|Multi-Domain>"
     }
 
     Ví dụ hợp lệ:
     [
-    {"qid": "q1", "label": "RAG"},
+    {"qid": "q1", "label": "Precision-Critical"},
     {"qid": "q2", "label": "STEM"},
-    {"qid": "q3", "label": "Compulsory"}
+    {"qid": "q3", "label": "Multi-Domain"}
     ]
 
     Không được trả về bất kỳ văn bản nào ngoài mảng JSON.
