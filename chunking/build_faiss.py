@@ -3,7 +3,6 @@ import json
 import os
 
 import faiss
-import numpy as np
 from tqdm import tqdm
 
 from core.llm_interface import Embedding_VNPTAI
@@ -15,14 +14,15 @@ def load_jsonl(path):
             yield json.loads(line)
 
 
-def build_faiss(jsonl_path: str, out_dir: str, index_name: str):
+def build_faiss(jsonl_path, out_dir, index_name):
     os.makedirs(out_dir, exist_ok=True)
 
-    embedding_model = Embedding_VNPTAI(embedding_name="LLM embedings")
+    embedder = Embedding_VNPTAI(
+        embedding_name="LLM embedings",
+        max_workers=4,
+    )
 
-    print("🔹 Loading chunks...")
-    texts = []
-    metadata = []
+    texts, metadata = [], []
 
     for obj in tqdm(load_jsonl(jsonl_path), desc="Reading JSONL"):
         texts.append(f"passage: {obj['text']}")
@@ -34,30 +34,22 @@ def build_faiss(jsonl_path: str, out_dir: str, index_name: str):
             }
         )
 
-    print(f"✅ Total chunks: {len(texts)}")
+    print(f"Total chunks: {len(texts)}")
 
-    print("🔹 Embedding...")
-    embeddings = embedding_model.get_batch_embeddings(texts)
+    embeddings = embedder.embed_texts(texts)
 
-    embeddings = np.asarray(embeddings, dtype="float32")
     faiss.normalize_L2(embeddings)
-
-    print("🔹 Building FAISS index...")
     dim = embeddings.shape[1]
+
     index = faiss.IndexFlatIP(dim)
     index.add(embeddings)
 
-    index_path = os.path.join(out_dir, f"{index_name}.index")
-    meta_path = os.path.join(out_dir, f"{index_name}_metadata.json")
+    faiss.write_index(index, f"{out_dir}/{index_name}.index")
 
-    faiss.write_index(index, index_path)
-
-    with open(meta_path, "w", encoding="utf-8") as f:
+    with open(f"{out_dir}/{index_name}_metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-    print("✅ FAISS index built successfully")
-    print(f"📦 Index: {index_path}")
-    print(f"📄 Metadata: {meta_path}")
+    print("FAISS index built successfully")
 
 
 def parse_args():
