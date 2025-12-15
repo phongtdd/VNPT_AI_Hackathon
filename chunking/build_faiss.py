@@ -30,6 +30,7 @@ def build_faiss(jsonl_path, out_dir, index_name):
             {
                 "id": obj["id"],
                 "dataset": obj.get("dataset"),
+                "text": obj.get("text"),
                 "length": obj.get("length"),
             }
         )

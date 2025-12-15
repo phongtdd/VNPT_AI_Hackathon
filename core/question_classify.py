@@ -13,7 +13,7 @@ import argparse
 def question_classify(dataset: list[dict[str, str]], llm: LLM_VNPTAI):
     question_str = ""
     for _, data in enumerate(dataset):
-        question_str += f"{data['qid']}. {data['question']}\n\n"
+        question_str += f"{data['qid']}. {data['question']}\n  Lựa chọn:\n {data['choices']}"
     user_prompt = f"""
         Danh sách các câu hỏi cần phân loại:
         {question_str}
