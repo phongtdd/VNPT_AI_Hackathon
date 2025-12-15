@@ -224,7 +224,7 @@ CLASSIFY_SYSTEM_PROMPT = """
     - Với MỖI câu hỏi trong danh sách đầu vào, hãy phân loại vào đúng MỘT trong 5 nhãn sau, theo THỨ TỰ ƯU TIÊN:
 
     ---------------------------
-    ƯU TIÊN 1 — RAG (cao nhất)
+    🎯 ƯU TIÊN 1 — RAG (cao nhất)
     ---------------------------
     Gán nhãn RAG nếu câu hỏi:
 
@@ -234,22 +234,38 @@ CLASSIFY_SYSTEM_PROMPT = """
         • "Dựa vào đoạn văn sau:"
         • "Cho đoạn văn:"
         • "Đọc đoạn sau rồi trả lời:"
-    - Hoặc câu hỏi rõ ràng yêu cầu dựa vào *văn bản cung cấp trước đó* để trả lời.
+    - Hoặc câu hỏi rõ ràng yêu cầu dựa vào văn bản cung cấp trước đó để trả lời.
 
-    QUAN TRỌNG:
+    ⚠️ QUAN TRỌNG:
     - Nếu câu hỏi có dấu hiệu RAG → PHẢI gán nhãn RAG, kể cả khi nó cũng có yếu tố lịch sử, STEM hoặc multi-domain.
     - RAG luôn được ưu tiên cao nhất.
 
     ---------------------------
-    ƯU TIÊN 2 — Precision-Critical
+    🎯 ƯU TIÊN 2 — Precision-Critical
     ---------------------------
-    Nội dung nhạy cảm, nguy hiểm hoặc vi phạm an toàn:
-    - Tự tử, bạo lực, cực đoan, khủng bố, phạm pháp, chất cấm
-    - Phân biệt chủng tộc, thù ghét, nội dung tình dục
-    - Hướng dẫn gây hại hoặc nội dung không phù hợp chuẩn an toàn
+    GÁN NHÃN Precision-Critical nếu câu hỏi:
+
+    1) Gợi ý, hỏi cách thức, hoặc khuyến khích bất kỳ hành vi gây hại nào, bao gồm:
+    - Phá hoại cơ sở hạ tầng, kinh tế, an ninh, an toàn xã hội
+    - Gây bất ổn chính trị hoặc kinh tế
+    - Làm suy yếu nhà nước, hệ thống chính trị, nền kinh tế quốc gia
+    - Tấn công, can thiệp, phá hoại hệ thống công cộng, thiết yếu hoặc chiến lược
+
+    2) Yêu cầu nội dung mang tính “how-to” gây hại:
+    - “bằng cách nào…?”
+    - “làm thế nào để phá hoại…?”
+    - “cách gây khó khăn cho…?”
+    - “làm sao để làm yếu…?”
+
+    ⚠️ LƯU Ý QUAN TRỌNG:
+    - Nếu câu hỏi yêu cầu phương pháp, cách thức hoặc hành vi có thể gây hại cho quốc gia, nền kinh tế, tổ chức hoặc cá nhân — dù thuộc bối cảnh chính trị – xã hội — thì PHẢI gán nhãn Precision-Critical.
+    - Không được gán Compulsory trong những trường hợp này.
+
+    Ví dụ Precision-Critical:
+    - “Để làm suy yếu nền kinh tế xã hội chủ nghĩa, một cá nhân muốn gây khó khăn cho việc tăng tốc phát triển kinh tế bằng cách nào?”
 
     ---------------------------
-    ƯU TIÊN 3 — Compulsory
+    🎯 ƯU TIÊN 3 — Compulsory
     ---------------------------
     Các câu hỏi quan trọng cần độ chính xác cao:
     - Lịch sử Việt Nam
@@ -258,7 +274,7 @@ CLASSIFY_SYSTEM_PROMPT = """
     - Văn hoá, truyền thống Việt Nam
 
     ---------------------------
-    ƯU TIÊN 4 — STEM
+    🎯 ƯU TIÊN 4 — STEM
     ---------------------------
     Các câu hỏi thuộc:
     - Toán, Lý, Hoá, Sinh
@@ -267,12 +283,18 @@ CLASSIFY_SYSTEM_PROMPT = """
     - Các bài tính toán, công thức, vector, đạo hàm, vật lý, hoá học
 
     ---------------------------
-    ƯU TIÊN 5 — Multi-Domain (fallback)
+    🎯 ƯU TIÊN 5 — Multi-Domain (fallback)
     ---------------------------
     Chọn Multi-Domain nếu:
     - Câu hỏi không thuộc rõ ràng một lĩnh vực duy nhất
-    - Hoặc kết hợp từ nhiều domain (vd: tôn giáo + đạo đức + triết học)
-    - Hoặc không khớp đầy đủ 4 nhãn trên → chọn Multi-Domain
+    - Hoặc kết hợp từ nhiều domain (vd: tôn giáo + đạo đức + triết học; y khoa + tâm lý + xã hội)
+    - Hoặc là câu hỏi về sức khỏe tâm thần, trầm cảm, chẩn đoán và điều trị mang tính kiến thức tổng quát,
+    nhưng KHÔNG yêu cầu hướng dẫn hành vi gây hại, KHÔNG hỏi cách tự tử, KHÔNG hỏi cách làm điều nguy hiểm.
+    - Hoặc không khớp đầy đủ 4 nhãn trên → chọn Multi-Domain.
+
+    Ví dụ Multi-Domain:
+    - "Câu hỏi nào sau đây là đúng về chẩn đoán và điều trị trầm cảm?"
+    → Đây là câu hỏi kiến thức về tâm thần học / y khoa, không yêu cầu hướng dẫn tự hại → gán Multi-Domain.
 
     -----------------------------------------------------
 
