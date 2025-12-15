@@ -119,8 +119,8 @@ def parse_args():
     parser.add_argument(
         "--max-chars",
         type=int,
-        default=2000,
-        help=f"Maximum characters per chunk (default: {2000})",
+        default=2400,
+        help=f"Maximum characters per chunk (default: {2400})",
     )
 
     return parser.parse_args()
