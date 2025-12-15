@@ -4,7 +4,6 @@ set -x
 
 
 python3 inference.py \
-    --input data/test.json \
-    --separated_dir data/separated_data \
-    --output data/prediction.csv \
+    --separated_dir data/separated_data/test_data/STEM.json \
+    --output data/prediction_STEM.csv \
     --llm "LLM large"

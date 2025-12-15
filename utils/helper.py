@@ -67,3 +67,10 @@ def load_separated_data(separated_dir):
             data = json.load(f)
 
         yield label, data
+
+
+def load_single_file(path):
+    label = os.path.basename(path).replace(".json", "")
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return [(label, data)]
