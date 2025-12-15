@@ -1,6 +1,7 @@
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Literal
+import json
 
 import numpy as np
 import requests
@@ -21,6 +22,7 @@ class LLM_VNPTAI:
         n: int = 1,
         max_completion_tokens: int = 64,
         seed: int = 42,
+        response_format= {"type": "json_object"}
     ):
         self.model = llm_name.split()[-1].lower()
         self.model_cfg = get_model_config(llm_name=llm_name)
@@ -42,6 +44,7 @@ class LLM_VNPTAI:
         self.n = n
         self.max_completion_tokens = max_completion_tokens
         self.seed = seed
+        self.response_format = response_format
 
     def get_single_answer(self, user_prompt: str):
         json_data = {
@@ -58,6 +61,7 @@ class LLM_VNPTAI:
             "n": self.n,
             "max_completion_tokens": self.max_completion_tokens,
             "seed": self.seed,
+            "response_format": self.response_format,
         }
 
         response = requests.post(self.url, headers=self.headers, json=json_data)
@@ -96,6 +100,7 @@ class LLM_VNPTAI:
             "n": 1,
             "max_completion_tokens": self.max_completion_tokens,
             "seed": self.seed,
+            "response_format": self.response_format,
         }
 
         response = requests.post(self.url, headers=self.headers, json=json_data)
