@@ -2,6 +2,7 @@ import argparse
 import csv
 import time
 from ast import arg
+import json
 
 from tqdm import tqdm
 
@@ -15,9 +16,14 @@ from utils.post_processing import choice_to_letter
 
 def infer(test_case: dict[str, str], llm: LLM_VNPTAI, label_config: dict[str, str]):
     if label_config["llm_type"] == "stem":
-        prompt = f"Câu hỏi:\n{test_case['question']}\n\nLựa chọn:\n{test_case['choices']}\n\n"
-        raw = llm.get_single_answer(prompt)
-        return raw[0]["answer"]
+        user_prompt = json.dumps(
+        {
+            "question": test_case["question"],
+            "choices": test_case["choices"]
+        },
+        ensure_ascii=False
+    )
+        return llm.get_single_answer_letter(user_prompt)
 
     raw = llm.predict(
         test_case,

@@ -4,8 +4,8 @@ from typing import Literal
 
 from core.llm_interface import LLM_VNPTAI
 from core.answer_extracter import LLM_AnswerExtractor
-from prompt.agent_prompt import STEM_PROMPT
-
+from prompt.agent_prompt import STEM_PROMPT_2
+from utils.post_processing import choice_to_letter
 
 class LLMStem(LLM_VNPTAI):
     def __init__(
@@ -28,47 +28,46 @@ class LLMStem(LLM_VNPTAI):
             max_completion_tokens=max_completion_tokens,
         )
 
-    def get_single_answer(self, question_with_choices: str) -> str:
-        output = super().get_single_answer(question_with_choices)
+    def get_single_answer(self, user_prompt: str) -> dict:
+        output = super().get_single_answer(user_prompt)
         return self.post_process(output)
 
-    def post_process(self, output: str):
-        # Ensure output is in valid JSON format
-        s = output.split("PHASE 2 — FINAL OUTPUT")[-1].strip()
-        
-        original = s
-        
-        match = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', s)
-        if match:
-            s = match.group(0)
+    def get_single_answer_letter(self, user_prompt: str) -> str:
+        result = self.get_single_answer(user_prompt)
 
-        s = s.replace("“", "\"").replace("”", "\"").replace("‘", "\"").replace("’", "\"")
+        input_data = json.loads(user_prompt)
+        choices = input_data["choices"]
 
-        s = re.sub(r',\s*([\]}])', r'\1', s)
+        final_answer_text = result["PHASE_3"]["final_answer"]
+        return choice_to_letter(final_answer_text, choices=choices)
 
-        s = re.sub(r'(\{|,)\s*([A-Za-z0-9_]+)\s*:', r'\1 "\2":', s)
+    def post_process(self, raw_output: str) -> dict:
+        """
+        Convert LLM raw string output to JSON dict.
+        Expect output to be a single JSON (3-phase format).
+        """
 
-        s = re.sub(r'"answer":\s*([A-Za-z])', r'"answer": "\1"', s)
+        text = raw_output.strip()
 
-        s = s.replace("}{", "},{")
+        # Remove markdown fences if any
+        if text.startswith("```"):
+            text = re.sub(r"^```(json)?", "", text)
+            text = re.sub(r"```$", "", text)
+            text = text.strip()
 
         try:
-            return json.loads(s)
-        except Exception as e:
-            print("Parse still failed. Input:")
-            print(original)
-            print("Smart parsing")
-            answer_extractor_llm = LLM_AnswerExtractor()
-            answer = answer_extractor_llm.get_single_answer(output)
-            print(answer)
-            return [{'qid': 'q1', 'answer': answer}]
-
+            return json.loads(text)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                "LLM output không phải JSON hợp lệ:\n" + text
+            ) from e
+    
 if __name__ == "__main__":
     llm_name = "LLM small"
 
     stem_llm = LLMStem(
         llm_name=llm_name,
-        system_prompt=STEM_PROMPT,
+        system_prompt=STEM_PROMPT_2,
         temperature=0.0,
         top_p=1.0,
         top_k=0,
@@ -76,24 +75,29 @@ if __name__ == "__main__":
         max_completion_tokens=2048,
     )
 
-    question = "Một quả bóng bay hình cầu có bán kính $ R $ đang được bơm phồng. Áp suất bên trong quả bóng tỷ lệ thuận với lực căng bề mặt $ \\sigma $ và tỷ lệ nghịch với bán kính $ R $. Nếu bán kính của quả bóng được nhân đôi, áp suất bên trong quả bóng thay đổi theo nhân tử nào?"
-    choices = [
-        "$ \\frac{1}{4} $",
-        "$ \\frac{1}{2} $",
-        "$ 1 $",
-        "$ 2 $",
-        "$ 4 $",
-        "$ 8 $",
-        "$ 16 $",
-        "$ \\frac{1}{8} $",
-        "$ \\frac{1}{16} $",
-        "$ 3 $",
-    ]
+    test =      {
+        "qid": "test_0252",
+        "question": "Một công ty có tài sản ngắn hạn là 100.000 USD và hàng tồn kho là 200.000 USD. Tỷ số nhanh của công ty được tính là 0,8. Lợi nhuận ngắn hạn của công ty là bao nhiêu?",
+        "choices": [
+            "125.000 USD",
+            "150.000 USD",
+            "200.000 USD",
+            "250.000 USD"
+        ],
+        "label": "STEM"
+    }
 
-    full_input = f"Câu hỏi:\n{question}\n\nLựa chọn:\n{choices}\n\n"
-
-    result = stem_llm.get_single_answer(full_input)
-
-    print(type(result))
-    print(result)
-    print(result[0]["answer"])
+    print(test["question"])
+    
+    user_prompt = json.dumps(
+        {
+            "question": test["question"],
+            "choices": test["choices"]
+        },
+        ensure_ascii=False
+    )
+    
+    print(type(user_prompt))
+    print("User prompt:", user_prompt)
+    result = stem_llm.get_single_answer_letter(user_prompt)
+    print("Final answer letter:", result)
