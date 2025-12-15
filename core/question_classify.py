@@ -21,7 +21,11 @@ def question_classify(dataset: list[dict[str, str]], llm: LLM_VNPTAI):
     return result
 
 
-def classify(data_path, model_name: Literal["LLM large", "LLM small"] = "LLM small"):
+def classify(
+    data_path,
+    model_name: Literal["LLM large", "LLM small"] = "LLM small",
+    batch_size: int = 20,
+):
     data = get_data(data_path)
     llm = LLM_VNPTAI(
         llm_name=model_name,
@@ -32,7 +36,7 @@ def classify(data_path, model_name: Literal["LLM large", "LLM small"] = "LLM sma
         max_completion_tokens=512,
     )
 
-    BATCH_SIZE_CLASSIFY = 20
+    BATCH_SIZE_CLASSIFY = batch_size
     classified_results = []
 
     total_batches = (len(data) + BATCH_SIZE_CLASSIFY - 1) // BATCH_SIZE_CLASSIFY
@@ -51,7 +55,7 @@ def classify(data_path, model_name: Literal["LLM large", "LLM small"] = "LLM sma
     return classified_data
 
 
-def seperate_data(data_path, output_dir="seperated_data"):
-    classified = classify(data_path)
+def seperate_data(data_path, output_dir="seperated_data", batch_size: int = 20):
+    classified = classify(data_path, batch_size=batch_size)
     classify_data(classified, output_dir=output_dir)
     print(f"Data separated and saved to {output_dir}")
