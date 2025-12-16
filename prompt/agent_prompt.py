@@ -258,14 +258,40 @@ CLASSIFY_SYSTEM_PROMPT = """
 
     Nếu KHÔNG thỏa đồng thời (1) và (2) → KHÔNG gán Precision-Critical.
     --------------------------- 
-    🎯 ƯU TIÊN 2 — STEM 
-    --------------------------- 
-    Các câu hỏi thuộc: 
-      - Toán, Lý, Hoá, Sinh 
-      - Kỹ thuật, Công nghệ, Tin học 
-      - Xác suất, thống kê, kinh tế định lượng 
-      - Các bài tính toán, công thức, vector, đạo hàm, vật lý, hoá học 
-      - Các bài toán về kinh tế, doanh nghiệp, tài chính, kinh tế học, kinh tế số 
+    🎯 ƯU TIÊN 2 — STEM
+    ---------------------------
+    CHỈ gán nhãn STEM nếu câu hỏi thỏa mãn ÍT NHẤT MỘT trong các điều kiện sau
+    VÀ KHÔNG vi phạm điều kiện Precision-Critical:
+
+    ### A. STEM TRUYỀN THỐNG
+    - Toán học, Vật lý, Hóa học, Sinh học
+    - Kỹ thuật, Công nghệ, Tin học, Khoa học máy tính
+    - Thuật toán, cấu trúc dữ liệu, hệ thống, mạng, AI/ML
+
+    ### B. KINH TẾ / TÀI CHÍNH / DOANH NGHIỆP — CHỈ KHI CÓ TÍNH TOÁN
+    ⚠️ Chỉ gán STEM cho các câu hỏi về kinh tế, doanh nghiệp, tài chính nếu:
+
+    - Có yêu cầu TÍNH TOÁN, SUY LUẬN ĐỊNH LƯỢNG, hoặc ÁP DỤNG MÔ HÌNH, ví dụ:
+      - tính chi phí, lợi nhuận, doanh thu
+      - tính lãi suất, NPV, IRR, ROI
+      - phân tích cung–cầu bằng số liệu
+      - bài toán tối ưu hóa, phân bổ nguồn lực
+      - sử dụng công thức, biểu đồ, bảng số liệu
+      - xác suất, thống kê, hồi quy, dự báo
+
+    - Hoặc yêu cầu thao tác số học rõ ràng:
+      - tính %, chênh lệch, tăng trưởng
+      - so sánh các phương án dựa trên số liệu
+
+    ### ❌ KHÔNG PHẢI STEM (KINH TẾ)
+    KHÔNG gán STEM nếu câu hỏi kinh tế mang tính:
+    - Thuần lý thuyết, khái niệm, định nghĩa
+    - Nhận định, đánh giá, phân tích định tính
+    - Chính sách kinh tế, pháp luật kinh tế
+    - Hành vi doanh nghiệp, quản trị, chiến lược (không có số liệu)
+    - Lịch sử kinh tế, học thuyết kinh tế
+
+    Các câu hỏi trên → KHÔNG STEM, chuyển sang Multi-Domain (nếu không thuộc Precision-Critical).
     --------------------------- 
     🎯 ƯU TIÊN 3 — Multi-Domain (fallback) 
     --------------------------- 
