@@ -136,67 +136,6 @@ Trong trường hợp không tồn tại đáp án hoàn toàn chính xác, bạ
 Khi câu hỏi thuộc loại KHÔNG ĐƯỢC PHÉP TRẢ LỜI, bạn BẮT BUỘC phải từ chối trả lời theo đúng nguyên tắc an toàn bằng cách chọn ĐÁP ÁN TỪ CHỐI trong số các lựa chọn được cung cấp.
 """
 
-STEM_PROMPT = """
-PHASE 1 — EXTERNAL REASONING (HIỂN THỊ BƯỚC GIẢI)
-====================================================
-Bạn là mô hình chuyên gia giải các bài toán STEM (Toán, Lý, Hóa, Sinh, Thống kê, Công nghệ, Kinh tế học kỹ thuật).
-
-Đối với MỖI câu hỏi trong danh sách đầu vào, bạn phải:
-1. Đọc nội dung câu hỏi.
-2. Đọc danh sách choices (mảng không có A/B/C/D).
-3. Gán nhãn vị trí cho từng lựa chọn:
-      choice[0] → A
-      choice[1] → B
-      choice[2] → C
-      choice[3] → D
-      ...
-4. Giải bài toán theo trình tự rõ ràng:
-   (a) Xác định dữ kiện và yêu cầu cần tìm.
-   (b) Gọi tên công thức hoặc định luật phù hợp.
-   (c) Thay số, biến đổi, rút gọn, kiểm tra sai số.
-   (d) Tính ra kết quả cuối cùng (dạng số hoặc biểu thức).
-   (e) So sánh kết quả thu được với từng lựa chọn.
-   (f) Xác định lựa chọn đúng theo vị trí (A/B/C/D/...).
-
-Bạn được phép:
-- Hiển thị toàn bộ chain-of-thought, tính toán, lập luận, công thức.
-- Dùng LaTeX để biểu diễn công thức.
-
-KHÔNG ĐƯỢC:
-- Nhảy thẳng tới đáp án mà không giải thích.
-- Bỏ qua bước so sánh với từng lựa chọn.
-
-SAU KHI HOÀN THÀNH PHẦN GIẢI CỦA TẤT CẢ CÂU HỎI,
-bạn phải CHUYỂN sang PHASE 2 và CHỈ TRẢ VỀ JSON ARRAY DUY NHẤT theo format yêu cầu.
-
-====================================================
-PHASE 2 — FINAL OUTPUT (CHỈ JSON ARRAY)
-=========================================
-Trong phase này, bạn phải TRẢ VỀ DUY NHẤT một JSON array.
-
-Mỗi phần tử phải có dạng:
-{
-  "qid": "<qid>",
-  "answer": "<A|B|C|D|E|...>"
-}
-
-YÊU CẦU BẮT BUỘC:
-- KHÔNG được ghi bất kỳ văn bản, nhãn phase, giải thích hay ký tự nào trước hoặc sau JSON array.
-- Chỉ được xuất đúng một JSON array chứa đúng số lượng câu hỏi trong user prompt.
-- answer phải là A/B/C/D/E/... dựa theo *vị trí* của lựa chọn đúng.
-- KHÔNG được in lại nội dung đáp án, chỉ in chữ cái.
-- KHÔNG được in chain-of-thought trong Phase 2.
-- KHÔNG được in văn bản ngoài JSON (nếu có → sai format).
-- Trong trường hợp không tồn tại đáp án hoàn toàn chính xác, phải chọn phương án có giá trị gần nhất hoặc tương đương hợp lý nhất
-
-Ví dụ hợp lệ:
-[
-  {"qid": "q1", "answer": "C"},
-  {"qid": "q2", "answer": "A"},
-  {"qid": "q3", "answer": "D"}
-]
-"""
-
 KR_PROMPT2 = """
 YÊU CẦU: Đọc câu hỏi sau, tạo ra kiến thức nền tảng hoặc thông tin toán học/khoa học liên quan làm thông tin ngữ cảnh (context information) có thể hữu ích cho việc trả lời câu hỏi. Bước gợi ý phải là bước giải tổng quát, TUYỆT ĐỐI KHÔNG thực hiện tính toán.
 
@@ -611,7 +550,7 @@ choices: {choices}
 """
 
 
-STEM_PROMPT_2 = """
+STEM_PROMPT = """
 Bạn là mô hình chuyên gia giải các bài toán STEM (Toán, Lý, Hóa, Sinh, Thống kê, Công nghệ, Kinh tế kỹ thuật).
 
 ────────────────────────────────
@@ -640,11 +579,12 @@ NGUYÊN TẮC BẮT BUỘC
 
 ────────────────────────────────
 PHASE_1 — PHÂN TÍCH & XÁC ĐỊNH YÊU CẦU ẨN
-Mục tiêu:
-
-* Làm rõ câu hỏi thực sự đang yêu cầu điều gì (kể cả yêu cầu ẩn).
-* Xác định các đại lượng cần tìm, dữ kiện đã cho và các giả định cần thiết.
-* Xác định phương pháp giải phù hợp (công thức, định luật, mô hình).
+Mục tiêu: Giải bài toán theo trình tự rõ ràng:
+  1. Xác định dữ kiện và yêu cầu cần tìm. Phân tích **đầy đủ từng yêu cầu** trong đề bài.
+  2. Đọc danh sách các lựa chọn.
+  3. Làm rõ câu hỏi thực sự đang yêu cầu điều gì (kể cả yêu cầu ẩn).
+  4. Xác định các đại lượng cần tìm, dữ kiện đã cho và các giả định cần thiết.
+  5. Xác định phương pháp giải phù hợp (công thức, định luật, mô hình).
 
 Format:
 {
@@ -655,6 +595,9 @@ Format:
 "implicit_requirements": [
 "Yêu cầu ẩn / điều kiện ngầm (nếu có)"
 ],
+"relative_knowledge: [
+"Các kiến thức liên quan"
+]
 "solution_strategy": [
 "Công thức / định luật / mô hình cần sử dụng"
 ]
@@ -666,22 +609,23 @@ PHASE_2 — THỰC HIỆN GIẢI QUYẾT
 Mục tiêu:
 
 * Dựa trên phân tích ở PHASE_1 để thực hiện giải bài toán.
-* Trình bày các phép biến đổi và tính toán cần thiết.
-* Thu được kết quả cuối cùng (số hoặc biểu thức).
+* Trình bày các biến đổi, rút gọn và tính toán cần thiết.
+* Thu được kết quả cuối cùng.
 
 Yêu cầu:
-
-* Có thể dùng LaTeX cho biểu thức toán học.
-* Không cần diễn giải dài dòng, tập trung vào các bước cốt lõi.
+* Trả **JSON hợp lệ 100%** theo format.
+* Không dùng LaTeX, chỉ dùng plain text cho các biểu thức.
+* Chuỗi JSON phải **đầy đủ và đóng mở dấu ngoặc hợp lệ**, không được cắt dở.
+* Nếu có dấu `"`, hãy escape bằng `\"`.
 
 Format:
 {
-"PHASE_2": {
-"calculations": [
-"Phép biến đổi / tính toán chính (LaTeX nếu cần)"
-],
-"final_result": "Kết quả tính toán cuối cùng"
-}
+  "PHASE_2": {
+    "solution_steps": [
+      "Phép biến đổi / tính toán chính (plain text)"
+    ],
+    "final_result": "Kết quả tính toán cuối cùng (plain text)"
+  }
 }
 
 ────────────────────────────────
@@ -691,23 +635,29 @@ Mục tiêu:
 * Dựa trên final_result của PHASE_2.
 * So sánh với TẤT CẢ các choices.
 * Chọn lựa chọn chính xác hoặc tương đương hợp lý nhất.
+* Trong trường hợp không tồn tại đáp án hoàn toàn chính xác, bạn BẮT BUỘC phải chọn phương án có giá trị gần nhất hoặc hợp lý nhất, bao gồm các trường hợp xấp xỉ hoặc làm tròn.
 
 Yêu cầu:
-
-* final_answer PHẢI là NGUYÊN VĂN của choice được chọn.
+* Mỗi key trong JSON **phải là duy nhất**. Không lặp lại key. Phải chứa đầy đủ tất cả các choices.
+* Output phải là JSON hợp lệ 100%.
+* Khi viết LaTeX, **chỉ dùng ký tự `\` chuẩn**, không escape thành `\textbackslash` hay các dạng khác.
+* final_answer PHẢI LÀ chữ cái duy nhất (A/B/C/D/E/...) tương ứng với choice được chọn.
+* Nếu không tồn tại đáp án hoàn toàn chính xác, bạn BẮT BUỘC phải chọn phương án có giá trị gần nhất hoặc hợp lý nhất.
+* KHÔNG được ghi bất kỳ văn bản, nhãn phase, giải thích hay ký tự nào trước hoặc sau JSON array.
 
 Format:
 {
-"PHASE_3": {
-"comparison": {
-"computed_result": "...",
-"choice_1": "...",
-"choice_2": "...",
-"choice_3": "...",
-"choice_4": "..."
-},
-"final_answer": "NGUYÊN VĂN ĐÁP ÁN ĐƯỢC CHỌN"
-}
+  "PHASE_3": {
+    "comparison": {
+      "computed_result": "...",
+      "A": "...",
+      "B": "...",
+      "C": "...",
+      "D": "...",
+      "E": "..."
+    },
+    "final_answer": "A"
+  }
 }
 
 ────────────────────────────────

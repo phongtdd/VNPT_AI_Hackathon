@@ -4,7 +4,7 @@ from typing import Literal
 
 from core.llm_interface import LLM_VNPTAI
 from core.answer_extracter import LLM_AnswerExtractor
-from prompt.agent_prompt import STEM_PROMPT_2
+from prompt.agent_prompt import STEM_PROMPT
 from utils.post_processing import choice_to_letter
 
 class LLMStem(LLM_VNPTAI):
@@ -27,7 +27,7 @@ class LLMStem(LLM_VNPTAI):
             top_k=top_k,
             n=n,
             max_completion_tokens=max_completion_tokens,
-            response_format= {"type": "json_object"}
+            response_format=response_format
         )
 
     def get_single_answer(self, user_prompt: str) -> dict:
@@ -44,11 +44,6 @@ class LLMStem(LLM_VNPTAI):
         return choice_to_letter(final_answer_text, choices=choices)
 
     def post_process(self, raw_output: str) -> dict:
-        """
-        Convert LLM raw string output to JSON dict.
-        Expect output to be a single JSON (3-phase format).
-        """
-
         text = raw_output.strip()
 
         # Remove markdown fences if any
@@ -69,7 +64,7 @@ if __name__ == "__main__":
 
     stem_llm = LLMStem(
         llm_name=llm_name,
-        system_prompt=STEM_PROMPT_2,
+        system_prompt=STEM_PROMPT,
         temperature=0.0,
         top_p=1.0,
         top_k=0,
@@ -78,20 +73,18 @@ if __name__ == "__main__":
         response_format= {"type": "json_object"}
     )
 
-    test =      {
-        "qid": "test_0252",
-        "question": "Một công ty có tài sản ngắn hạn là 100.000 USD và hàng tồn kho là 200.000 USD. Tỷ số nhanh của công ty được tính là 0,8. Lợi nhuận ngắn hạn của công ty là bao nhiêu?",
+    test =         {
+        "qid": "test_0248",
+        "question": "Công ty Kennie bán một máy in với giá 31.000 đô la sau ba năm sở hữu. Máy in có chi phí ban đầu là 58.000 đô la và cơ sở khấu hao là 48.000 đô la. Giá trị sổ sách của máy in vào thời điểm bán là bao nhiêu, và lợi nhuận từ việc bán là bao nhiêu?",
         "choices": [
-            "125.000 USD",
-            "150.000 USD",
-            "200.000 USD",
-            "250.000 USD"
+            "Giá trị sổ sách: 20.000 đô la; Lợi nhuận: 11.000 đô la",
+            "Giá trị sổ sách: 29.200 đô la; Lợi nhuận: 1.800 đô la",
+            "Giá trị sổ sách: 29.200 đô la; Lợi nhuận: 11.000 đô la",
+            "Giá trị sổ sách: 20.000 đô la; Lợi nhuận: 1.800 đô la"
         ],
         "label": "STEM"
     }
 
-    print(test["question"])
-    
     user_prompt = json.dumps(
         {
             "question": test["question"],
@@ -100,7 +93,8 @@ if __name__ == "__main__":
         ensure_ascii=False
     )
     
-    print(type(user_prompt))
-    print("User prompt:", user_prompt)
-    result = stem_llm.get_single_answer_letter(user_prompt)
-    print("Final answer letter:", result)
+    print("User prompt:", json.dumps(user_prompt, ensure_ascii=False, indent=2))
+    
+    result = stem_llm.get_single_answer(user_prompt)
+    result = json.dumps(result, ensure_ascii=False, indent=2)
+    print(result)
