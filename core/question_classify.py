@@ -10,10 +10,10 @@ from typing import List, Dict, Any, Callable, Optional
 import re
 import argparse
 
-def question_classify(dataset: list[dict[str, str]], llm: LLM_VNPTAI):
+def question_classify(dataset: list[dict[str, Any]], llm: LLM_VNPTAI):
     question_str = ""
     for _, data in enumerate(dataset):
-        question_str += f"{data['qid']}. {data['question']}\n  Lựa chọn:\n {data['choices']}"
+        question_str += f"{data['qid']}. {data['question']}\n  Lựa chọn:\n {data['choices']} \n\n"
     user_prompt = f"""
         Danh sách các câu hỏi cần phân loại:
         {question_str}
@@ -29,7 +29,6 @@ def classify_rag(questions: List[Dict[str, Any]]):
     remain_question= []
 
     for i, q in enumerate(questions):
-        q = q or ""
         is_rag = bool(RAG_PREFIX_PATTERN.search(q["question"]))
         if is_rag:
             q["label"] = "RAG"
@@ -45,7 +44,8 @@ def classify(
 ):
     data = get_data(data_path)
     rag_question, remain_question = classify_rag(data)
-
+    print(f"RAG question: {len(rag_question)}")
+    print(f"Remain question: {len(remain_question)}")
     llm = LLM_VNPTAI(
         llm_name=model_name,
         system_prompt=CLASSIFY_SYSTEM_PROMPT,
@@ -59,7 +59,7 @@ def classify(
     remain_classified_results = []
 
     total_batches = (len(remain_question) + BATCH_SIZE_CLASSIFY - 1) // BATCH_SIZE_CLASSIFY
-
+    print(CLASSIFY_SYSTEM_PROMPT)
     for i in tqdm(
         range(0, len(remain_question), BATCH_SIZE_CLASSIFY),
         total=total_batches,
@@ -68,6 +68,7 @@ def classify(
     ):
         batch = remain_question[i : i + BATCH_SIZE_CLASSIFY]
         result = question_classify(batch, llm)
+        print(result)
         remain_classified_results.extend(result)
     remain_classified_results.extend(rag_question)
     classified_data = merge_by_qid(data, remain_classified_results)
