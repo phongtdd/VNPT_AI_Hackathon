@@ -17,6 +17,7 @@ class LLMStem(LLM_VNPTAI):
         top_k=0,
         n=1,
         max_completion_tokens=2048,
+        response_format= {"type": "json_object"}
     ):
         super().__init__(
             llm_name=llm_name,
@@ -26,6 +27,7 @@ class LLMStem(LLM_VNPTAI):
             top_k=top_k,
             n=n,
             max_completion_tokens=max_completion_tokens,
+            response_format= {"type": "json_object"}
         )
 
     def get_single_answer(self, user_prompt: str) -> dict:
