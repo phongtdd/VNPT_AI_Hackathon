@@ -73,6 +73,7 @@ if __name__ == "__main__":
         top_k=0,
         n=1,
         max_completion_tokens=2048,
+        response_format= {"type": "json_object"}
     )
 
     test =      {

@@ -22,7 +22,7 @@ class LLM_VNPTAI:
         n: int = 1,
         max_completion_tokens: int = 64,
         seed: int = 42,
-        response_format= {"type": "json_object"}
+        response_format= {}
     ):
         self.model = llm_name.split()[-1].lower()
         self.model_cfg = get_model_config(llm_name=llm_name)
