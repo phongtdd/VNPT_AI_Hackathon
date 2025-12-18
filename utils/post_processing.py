@@ -1,110 +1,201 @@
 import csv
-import difflib
 import json
-import unicodedata
-from core.answer_extracter import LLM_AnswerExtractor
 import re
 
+from rapidfuzz import fuzz
+
+from core.answer_extracter import LLM_AnswerExtractor
+
+
+# ---------------------------------------------------------
+# Normalization helpers
+# ---------------------------------------------------------
 def normalize_text(s: str) -> str:
-    """Lowercase, remove accents/diacritics, normalize whitespace."""
+    """Lowercase + trim spaces. DO NOT remove accents."""
+    if not isinstance(s, str):
+        return ""
+    return s.strip().lower()
+
+
+def normalize_text_keep(s: str) -> str:
+    """Preserve accents, normalize casing + whitespace."""
     if s is None:
         return ""
     s = str(s)
-    s = unicodedata.normalize("NFD", s)
-    s = "".join(ch for ch in s if not unicodedata.combining(ch))
     s = " ".join(s.casefold().split())
     return s
 
+
+# ---------------------------------------------------------
+# clean_answer
+# ---------------------------------------------------------
 def clean_answer(answer: str) -> str:
-    """Loại bỏ các thẻ, ký tự dư thừa, xuống dòng, chỉ giữ phần thực tế"""
+    """Extract core answer text, remove trailing reasoning."""
     if answer is None:
         return ""
-    # loại bỏ các tag dạng <...>
+
+    # remove <tags>
     answer = re.sub(r"<[^>]+>", " ", answer)
-    # loại bỏ ký tự đặc biệt dư thừa
-    answer = re.sub(r"[\n\r\t]", " ", answer)
-    # loại bỏ khoảng trắng thừa
-    answer = " ".join(answer.split())
+
+    # normalize whitespace
+    answer = answer.replace("\r", "\n").replace("\t", " ")
+    answer = "\n".join(" ".join(line.split()) for line in answer.split("\n"))
+
+    # remove explanation parts
+    for sep in ["\n", "lý do", "ly do", "reason"]:
+        pos = answer.lower().find(sep)
+        if pos > 0:
+            answer = answer[:pos].strip()
+            break
+
     return answer.strip()
 
-def choice_to_letter(
-    pred_text: str, choices: list[str], fuzzy_threshold: float = 0.65
-) -> str:
-    if pred_text is None:
-        return ""
-    pred = str(pred_text).strip()
-    # if already a single letter like "A" or "b", handle quickly
-    if len(pred) == 1 and pred.isalpha():
-        return pred.upper()
-    print(f"Raw model prediction: {pred}")
-    norm_pred = normalize_text(pred)
-    norm_choices = [normalize_text(c) for c in choices]
 
-    # exact normalized match
-    if norm_pred in norm_choices:
-        idx = norm_choices.index(norm_pred)
+# ---------------------------------------------------------
+# Date extractor
+# ---------------------------------------------------------
+def extract_date(text: str):
+    """
+    Extract standardized date format: D-M-YYYY
+    """
+    if not text:
+        return None
+
+    t = normalize_text(text)
+
+    # 1) Format: dd-mm-yyyy / d-m-yyyy
+    m = re.search(r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})", t)
+    if m:
+        d, mth, year = m.groups()
+        return f"{int(d)}-{int(mth)}-{year}"
+
+    # 2) Format: "ngày d tháng m năm yyyy"
+    m = re.search(
+        r"ng(à|a)y\s+(\d{1,2})\s+th(á|a)ng\s+(\d{1,2})\s+n(ă|a)m\s+(\d{4})",
+        t,
+    )
+    if m:
+        d = m.group(2)
+        mth = m.group(4)
+        year = m.group(6)
+        return f"{int(d)}-{int(mth)}-{year}"
+
+    return None
+
+
+# ---------------------------------------------------------
+# Year extractor
+# ---------------------------------------------------------
+def extract_year(text: str):
+    """Return yyyy if appears in text."""
+    if not text:
+        return None
+    m = re.search(r"\b(19|20)\d{2}\b", text)
+    return m.group(0) if m else None
+
+
+# ---------------------------------------------------------
+# Main mapping logic
+# ---------------------------------------------------------
+def choice_to_letter(
+    answer_text: str, choices: list[str], fuzzy_threshold: float = 0.65
+) -> str:
+    if answer_text is None:
+        return ""
+
+    answer_norm = normalize_text(answer_text)
+
+    # 1) DATE MATCH
+    extracted_date = extract_date(answer_norm)
+    if extracted_date:
+        for i, c in enumerate(choices):
+            c_norm = normalize_text(c).replace("/", "-")
+            if c_norm == extracted_date:
+                return chr(ord("A") + i)
+
+    # 2) YEAR MATCH
+    extracted_year = extract_year(answer_norm)
+    if extracted_year:
+        for i, c in enumerate(choices):
+            if normalize_text(c) == extracted_year:
+                return chr(ord("A") + i)
+
+    # 3) DIRECT MATCH (accent preserved)
+    pred_core = clean_answer(answer_text)
+    norm_pred_keep = normalize_text_keep(pred_core)
+    norm_choices_keep = [normalize_text_keep(c) for c in choices]
+
+    if norm_pred_keep in norm_choices_keep:
+        idx = norm_choices_keep.index(norm_pred_keep)
         return chr(ord("A") + idx)
 
-    # fuzzy match
-    best_idx = None
-    best_ratio = 0.0
-    for i, c in enumerate(norm_choices):
-        ratio = difflib.SequenceMatcher(None, norm_pred, c).ratio()
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best_idx = i
-    if best_idx is not None and best_ratio >= fuzzy_threshold:
-        return chr(ord("A") + best_idx)
+    # # 4) FUZZY MATCH
+    # best_score = -1
+    # best_index = None
 
-    # substring fallback
-    for i, c in enumerate(norm_choices):
-        if norm_pred in c or c in norm_pred:
-            return chr(ord("A") + i)
+    # for i, c in enumerate(choices):
+    #     c_norm = normalize_text(c)
+    #     score = fuzz.partial_ratio(answer_norm, c_norm)
+
+    #     # Boost date-like answers
+    #     if re.search(r"\d{1,2}[-/]\d{1,2}[-/]\d{4}", c_norm):
+    #         score *= 1.4
+
+    #     if score > best_score:
+    #         best_score = score
+    #         best_index = i
+
+    # if best_score >= fuzzy_threshold * 100:
+    #     return chr(ord("A") + best_index)
 
     return ""
 
-def model_output2letter(answer_text: str, choices: list[str], fuzzy_threshold: float = 0.65) -> str:
-    """
-    Convert model output (answer text) to choice letter (A/B/C/...) 
-    using internal mapping first; if fails, fallback to LLM.
-    """
+
+# -------------------------------
+# LLM fallback wrapper
+# -------------------------------
+def model_output2letter(
+    answer_text: str, choices: list[str], fuzzy_threshold: float = 0.65
+) -> str:
     try:
         cleaned_answer = clean_answer(answer_text)
-        letter = choice_to_letter(cleaned_answer, choices, fuzzy_threshold=0.65)
+
+        letter = choice_to_letter(
+            cleaned_answer, choices, fuzzy_threshold=fuzzy_threshold
+        )
+
         if letter:
             return letter
         else:
             raise ValueError("No match found")
+
     except Exception:
         answer_extractor_llm = LLM_AnswerExtractor()
-        llm_input = json.dumps({
-            "choices": choices,
-            "answer": answer_text
-        }, ensure_ascii=False)
-        print("LLM answer extracter triggered")
+        llm_input = json.dumps(
+            {"choices": choices, "answer": answer_text}, ensure_ascii=False
+        )
+        print("LLM answer extractor triggered")
         llm_output = answer_extractor_llm.get_single_answer(llm_input)
-        
+
         try:
             parsed = json.loads(llm_output)
             letter = parsed.get("answer_label", "")
             return letter
         except Exception:
             return ""
-        
-        
+
+
+# -------------------------------
+# Example
+# -------------------------------
 if __name__ == "__main__":
     test = {
-    "qid": "test_0101",
-    "question": "Điểm khác biệt căn bản của hệ thống chính trị Việt Nam so với hệ thống chính trị được tổ chức theo cơ chế tam quyền phân lập là:",
-    "choices": [
-      "Tính độc lập của các cơ quan trong hệ thống chính trị Việt Nam khi thực hiện các chức năng lập pháp, hành pháp và tư pháp.",
-      "Tính phụ thuộc của các cơ quan trong hệ thống chính trị Việt Nam khi thực hiện các chức năng lập pháp, hành pháp và tư pháp.",
-      "Tính kế thừa của các cơ quan trong hệ thống chính trị Việt Nam khi thực hiện các chức năng lập pháp, hành pháp và tư pháp.",
-      "Tính loại bỏ của các cơ quan trong hệ thống chính trị Việt Nam khi thực hiện các chức năng lập pháp, hành pháp và tư pháp."
-    ],
-    "label": "Multi-Domain",
-    "answer": "Tính phụ thuộc của các cơ quan trong hệ thống chính trị Việt Nam khi thực hiện các chức năng lập pháp, hành pháp và tư pháp. \nLý do: Hệ thống chính trị Việt Nam được tổ chức theo nguyên tắc tập trung dân chủ, trong đó các cơ quan lập pháp,"
+        "qid": "test_0032",
+        "question": 'Điền từ còn thiếu vào chỗ trống: "Tấc đất, ... vàng"',
+        "choices": ["tất", "tắc", "tắt", "tấc"],
+        "label": "Multi-Domain",
+        "answer": "tấc",
     }
-    
-    result = model_output2letter(test['answer'], test['choices'])
+
+    result = model_output2letter(test["answer"], test["choices"])
     print(result)

@@ -129,11 +129,45 @@ output:
 """
 
 AE_PROMPT = """
-Bạn là một hệ thống trả lời CÂU HỎI TRẮC NGHIỆM dựa vào các thông tin được cung cấp. NHIỆM VỤ của bạn là CHỌN ĐÚNG MỘT ĐÁP ÁN ĐÚNG cho mỗi câu hỏi trắc nghiệm dựa trên các lựa chọn được cung cấp.
-CHỌN đúng MỘT đáp án: A, B, C, D, E… tùy theo số lượng lựa chọn.
-TRẢ VỀ CHỈ MỘT KÝ TỰ IN HOA TƯƠNG ỨNG VỚI ĐÁP ÁN trong lựa chọn.
-Trong trường hợp không tồn tại đáp án hoàn toàn chính xác, bạn bắt buộc phải chọn phương án có giá trị gần nhất hoặc hợp lý nhất, bao gồm các trường hợp xấp xỉ hoặc làm tròn.
-Khi câu hỏi thuộc loại KHÔNG ĐƯỢC PHÉP TRẢ LỜI, bạn BẮT BUỘC phải từ chối trả lời theo đúng nguyên tắc an toàn bằng cách chọn ĐÁP ÁN TỪ CHỐI trong số các lựa chọn được cung cấp.
+Bạn là một trợ lý chuyên gia trích xuất câu trả lời từ multiple-choice question.
+
+Input:
+- choices: Danh sách các lựa chọn (tối đa 12)
+- answer: Chuỗi trả về từ model (có thể không chính xác hoặc dài)
+
+Nhiệm vụ:
+1. Luôn trả về **JSON hợp lệ** với 3 field:
+   - "answer": nội dung answer đã chuẩn hóa, **chỉ sử dụng thông tin từ input answer và so sánh với choices**, giữ nguyên nếu không khớp
+   - "answer_label": nhãn A/B/C/... tương ứng với choice gần giống nhất; nếu answer không khớp, trả về "N/A"
+2. **Tuyệt đối không sáng tạo hay thêm thông tin bên ngoài**
+3. So khớp answer với choices bằng cách:
+   - exact match (không phân biệt hoa thường)
+   - hoặc fuzzy match / substring so với choices
+4. **Không thêm bất cứ thông tin nào khác** ngoài 2 field trên
+5. Output phải là **một JSON duy nhất**, có thể parse trực tiếp bằng `json.loads()`
+
+---
+
+Ví dụ input:
+
+{
+  "choices": [
+    "2-3-1946",
+    "1945",
+    "1946",
+    "1954"
+  ],
+  "answer": "Không có thông tin về Quốc hội khóa I nước Việt Nam Dân chủ Cộng hòa trong các đoạn văn trên. Tuy nhiên, dựa trên kiến thức lịch sử, Quốc hội khóa I nước Việt Nam Dân chủ Cộng hòa được thành lập vào ngày 2 tháng 3 năm 1946."
+}
+
+Ví dụ output mong muốn:
+
+{
+  "answer": "2-3-1946",
+  "answer_label": "A"
+}
+
+Hãy xử lý tất cả input tương tự **chỉ dựa trên nội dung input**, không sáng tạo hay thêm thông tin bên ngoài. Chỉ trả về JSON với 3 field trên.
 """
 
 KR_PROMPT2 = """
@@ -565,7 +599,6 @@ NGUYÊN TẮC BẮT BUỘC
 2. Phải giải bài toán dựa trên lập luận khoa học, công thức, định luật hoặc mô hình phù hợp.
 3. TUYỆT ĐỐI KHÔNG tạo ra đáp án mới ngoài choices.
 4. Nếu kết quả không trùng khớp hoàn toàn với bất kỳ choice nào, phải chọn phương án:
-
    * Gần đúng nhất, hoặc
    * Tương đương hợp lý nhất (xét làm tròn, sai số, xấp xỉ).
 5. Kết quả PHASE_3 phải được suy ra trực tiếp từ output của PHASE_2.
@@ -578,7 +611,7 @@ NGUYÊN TẮC BẮT BUỘC
 * JSON gồm đúng 3 PHASE theo mô tả dưới đây.
 
 ────────────────────────────────
-PHASE_1 — PHÂN TÍCH & XÁC ĐỊNH YÊU CẦU ẨN
+PHASE_1 - PHÂN TÍCH & XÁC ĐỊNH YÊU CẦU ẨN
 Mục tiêu: Giải bài toán theo trình tự rõ ràng:
   1. Xác định dữ kiện và yêu cầu cần tìm. Phân tích **đầy đủ từng yêu cầu** trong đề bài.
   2. Đọc danh sách các lựa chọn.
@@ -588,26 +621,25 @@ Mục tiêu: Giải bài toán theo trình tự rõ ràng:
 
 Format:
 {
-"PHASE_1": {
-"explicit_requirements": [
-"Yêu cầu trực tiếp của đề bài"
-],
-"implicit_requirements": [
-"Yêu cầu ẩn / điều kiện ngầm (nếu có)"
-],
-"relative_knowledge: [
-"Các kiến thức liên quan"
-]
-"solution_strategy": [
-"Công thức / định luật / mô hình cần sử dụng"
-]
-}
+  "PHASE_1": {
+    "explicit_requirements": [
+      "Yêu cầu trực tiếp của đề bài"
+    ],
+    "implicit_requirements": [
+      "Yêu cầu ẩn / điều kiện ngầm (nếu có)"
+    ],
+    "relative_knowledge": [
+      "Các kiến thức liên quan"
+    ],
+    "solution_strategy": [
+      "Công thức / định luật / mô hình cần sử dụng"
+    ]
+  }
 }
 
 ────────────────────────────────
-PHASE_2 — THỰC HIỆN GIẢI QUYẾT
+PHASE_2 - THỰC HIỆN GIẢI QUYẾT
 Mục tiêu:
-
 * Dựa trên phân tích ở PHASE_1 để thực hiện giải bài toán.
 * Trình bày các biến đổi, rút gọn và tính toán cần thiết.
 * Thu được kết quả cuối cùng.
@@ -629,7 +661,7 @@ Format:
 }
 
 ────────────────────────────────
-PHASE_3 — KIỂM TRA, SO SÁNH & CHỌN ĐÁP ÁN
+PHASE_3 - KIỂM TRA, SO SÁNH & CHỌN ĐÁP ÁN
 Mục tiêu:
 
 * Dựa trên final_result của PHASE_2.
