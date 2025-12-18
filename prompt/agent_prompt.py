@@ -700,3 +700,537 @@ DỮ LIỆU ĐẦU VÀO
 }
 
 """
+
+STEM_CLASSIFY_PROMPT = """
+NHIỆM VỤ:
+Chỉ phân loại bài toán theo cách sử dụng các choices.
+
+PHÂN LOẠI BẮT BUỘC (CHỈ CHỌN 1):
+
+1. ANSWER_VALIDATION
+   – Mỗi choice là một phát biểu/nhận định hoàn chỉnh.
+   – Cần phân tích nội dung các phát biểu để xác định cái nào đúng.
+   – Không tồn tại một kết quả duy nhất nếu không xét choices.
+
+2. QUESTION_DRIVEN
+   – Đề bài xác định rõ đại lượng/hiện tượng cần tìm.
+   – Có thể giải bài toán độc lập với choices.
+   – Choices chỉ là các biểu diễn khác nhau của kết quả.
+
+QUY TẮC:
+* KHÔNG giải bài toán.
+* KHÔNG phân tích đúng/sai của choices.
+* KHÔNG dùng công thức hay tính toán.
+* KHÔNG thêm giả định.
+
+FORMAT OUTPUT (JSON):
+
+{
+  "analysis_mode": "ANSWER_VALIDATION | QUESTION_DRIVEN"
+}
+
+────────────────────────────────
+DỮ LIỆU ĐẦU VÀO
+{
+"question": "{question}",
+"choices": "{choices}"
+}
+"""
+
+STEM_PROMPT_QUESTION_DRIVEN = """
+Bạn là mô hình chuyên gia giải các bài toán STEM (Toán, Lý, Hóa, Sinh, Thống kê, Công nghệ, Kinh tế kỹ thuật).
+
+────────────────────────────────
+NHIỆM VỤ CUỐI CÙNG (BẮT BUỘC)
+→ Chọn CHÍNH XÁC 1 đáp án đúng nhất từ danh sách input.choices.
+→ Đáp án cuối cùng PHẢI là NGUYÊN VĂN của lựa chọn trong choices.
+
+────────────────────────────────
+NGUYÊN TẮC BẮT BUỘC
+
+1. Phải đọc kỹ câu hỏi và TOÀN BỘ các choices.
+2. Phải giải bài toán dựa trên lập luận khoa học, công thức, định luật hoặc mô hình phù hợp.
+3. TUYỆT ĐỐI KHÔNG tạo ra đáp án mới ngoài choices.
+4. Nếu kết quả không trùng khớp hoàn toàn với bất kỳ choice nào, phải chọn phương án:
+   * Gần đúng nhất, hoặc
+   * Tương đương hợp lý nhất (xét làm tròn, sai số, xấp xỉ).
+5. Luôn ưu tiên thực hiện chứng minh bằng công thức và tính toán nếu được.
+6. PHASE_1 và PHASE_2 KHÔNG ĐƯỢC giả định dữ kiện mới,
+  NHƯNG ĐƯỢC PHÉP sử dụng các giả định chuẩn ngầm trong STEM
+  (nếu không mâu thuẫn đề bài).
+7. Giả định điều kiện ẩn CHỈ ĐƯỢC PHÉP thực hiện trong PHASE_4.
+
+────────────────────────────────
+ĐỊNH DẠNG BẮT BUỘC
+
+* Chỉ trả về DUY NHẤT một JSON.
+* Không thêm bất kỳ văn bản nào ngoài JSON.
+* JSON gồm đúng 3 PHASE theo mô tả dưới đây.
+
+────────────────────────────────
+PHASE_1 - PHÂN TÍCH & XÁC ĐỊNH YÊU CẦU GIẢI TOÁN
+
+Mục tiêu:
+* Xác định CHÍNH XÁC bản chất khoa học của câu hỏi.
+* Xác định đại lượng/hiện tượng mà đề bài THỰC SỰ yêu cầu tìm.
+* Liệt kê ĐẦY ĐỦ các điều kiện, khái niệm và quan hệ cần thiết để có thể kết luận được điều được hỏi.
+
+BẮT BUỘC THỰC HIỆN:
+
+1. Nhận diện loại yêu cầu của câu hỏi
+* Xác định rõ câu hỏi thuộc loại:
+  – ĐỊNH LƯỢNG (tìm giá trị số, công thức, biểu thức), hoặc
+  – ĐỊNH TÍNH (mô tả hiện tượng, xu hướng, so sánh).
+* Xác định rõ: câu hỏi đang hỏi về ĐẠI LƯỢNG NÀO / HIỆN TƯỢNG NÀO,
+  không được suy diễn sang đại lượng gần đúng hoặc liên quan.
+
+2. Đọc input.choices để nhận diện phạm vi câu trả lời
+* ĐƯỢC PHÉP đọc choices để:
+  – Xác định đơn vị đang được ngầm sử dụng.
+  – Xác định dạng kết quả mong đợi (giá trị đơn, khoảng, cặp giá trị, mô tả định tính…).
+* KHÔNG được:
+  – So sánh, loại trừ hay đánh giá đúng/sai bất kỳ choice nào.
+  – Điều chỉnh cách hiểu câu hỏi để khớp choices.
+
+3. Tách rõ dữ kiện và điều kiện
+* given_data:
+  – Liệt kê TOÀN BỘ dữ kiện xuất hiện TRỰC TIẾP trong đề bài.
+  – Không diễn giải lại, không rút gọn, không thay thế bằng mô hình khác.
+
+* missing_data:
+  – Liệt kê TẤT CẢ dữ kiện hoặc điều kiện CẦN THIẾT để kết luận được điều được hỏi,
+    bao gồm:
+    * Dữ kiện số học (nếu bài toán định lượng).
+    * Điều kiện khái niệm / vật lý / hóa học / sinh học (nếu ảnh hưởng đến kết luận).
+  – Nếu thiếu điều kiện khái niệm → BẮT BUỘC phải liệt kê, kể cả khi không có phép tính.
+
+4. explicit_requirements & implicit_requirements
+* explicit_requirements:
+  – Ghi đúng và đầy đủ yêu cầu trực tiếp của đề bài, đúng đối tượng, đúng môi trường, đúng ngữ cảnh.
+  – Xác định các điều kiện, và 
+  - Không được mở rộng hoặc suy diễn.
+
+* implicit_requirements:
+  – Liệt kê các điều kiện NGẦM nhưng BẮT BUỘC phải đúng thì câu hỏi mới có nghĩa khoa học,
+    ví dụ:
+    * Môi trường đo.
+    * Trạng thái chuẩn.
+    * Mô hình vật lý/hoá học/sinh học đang được ngầm sử dụng.
+  – Chỉ liệt kê, KHÔNG được gán giá trị.
+  - Bắt buộc 
+
+5. solution_strategy
+* Chỉ mô tả HƯỚNG GIẢI ở mức phương pháp:
+  – Công thức, định luật, mô hình sẽ sử dụng.
+* KHÔNG được thực hiện tính toán.
+* KHÔNG được suy ra kết quả.
+
+NGUYÊN TẮC CẤM:
+* KHÔNG kết luận dữ kiện là “đủ”.
+* KHÔNG giả định đề sai, nhầm đơn vị, lỗi ra đề.
+* KHÔNG đánh giá đúng/sai.
+* KHÔNG loại trừ bất kỳ choice nào.
+
+Format:
+{
+  "PHASE_1": {
+    "explicit_requirements": [...],
+    "implicit_requirements": [...],
+    "given_data": [...],
+    "missing_data": [...],
+    "solution_strategy": [...]
+  }
+}
+
+────────────────────────────────
+PHASE_2 - THỰC HIỆN GIẢI QUYẾT
+Mục tiêu:
+* Dựa trên phân tích ở PHASE_1 để thực hiện giải bài toán.
+* Trình bày các biến đổi, rút gọn và tính toán cần thiết.
+* Thực hiện các phép tính trực tiếp có thể làm được.
+
+Yêu cầu:
+* Trả **JSON hợp lệ 100%** theo format.
+* Không dùng LaTeX, chỉ dùng plain text cho các biểu thức.
+* Chuỗi JSON phải **đầy đủ và đóng mở dấu ngoặc hợp lệ**, không được cắt dở.
+* Nếu có dấu `"`, hãy escape bằng `\"`.
+* ĐƯỢC PHÉP đọc input.choices để:
+  – Xác định đại lượng vật lý / đại lượng toán học mà bài toán thực sự yêu cầu tìm.
+  – Nhận diện dạng kết quả cần thu được (số, biểu thức, mô tả định tính, cặp giá trị, v.v.).
+* KHÔNG được:
+  – So sánh kết quả với choices.
+  – Loại trừ hoặc chọn bất kỳ choice nào.
+  – Điều chỉnh lời giải để khớp một choice cụ thể.
+  
+Format:
+{
+  "PHASE_2": {
+    "solution_steps": [
+      "Phép biến đổi / tính toán chính (plain text)"
+    ],
+    "final_result": "Kết quả tính toán cuối cùng (plain text)"
+  }
+}
+
+────────────────────────────────
+PHASE_3 - KIỂM TRA & ĐỐI CHIẾU
+Mục tiêu:
+* So sánh final_result từ PHASE_2 với tất cả các choices.
+* Nếu final_result **gần đúng, làm tròn, xấp xỉ hoặc logic hợp lý** với một choice → coi là khớp.
+* Nếu có choice nào khớp → set "has_result": true; nếu không → set "has_result": false.
+
+Yêu cầu:
+* Mỗi key trong JSON **phải là duy nhất**. Không lặp lại key. Phải chứa đầy đủ tất cả các choices.
+* Output phải là JSON hợp lệ 100%.
+* Khi viết LaTeX, **chỉ dùng ký tự `\` chuẩn**, không escape thành `\textbackslash` hay các dạng khác.
+* final_answer PHẢI LÀ chữ cái duy nhất (A/B/C/D/E/...) tương ứng với choice được chọn.
+* KHÔNG được ghi bất kỳ văn bản, nhãn phase, giải thích hay ký tự nào trước hoặc sau JSON array.
+
+Format:
+{
+  "PHASE_3": {
+    "computed_result": "...",
+    "choices": {
+      "A": "...",
+      "B": "...",
+      "C": "...",
+      "D": "...",
+      "...": "..."
+    },
+    "has_result": true/false
+  }
+}
+
+────────────────────────────────
+PHASE_4 - XÁC ĐỊNH ĐÁP ÁN CUỐI CÙNG
+
+Mục tiêu:
+* Nếu PHASE_3.has_result = true → chọn letter tương ứng với choice khớp hoặc gần đúng nhất.
+* Nếu PHASE_3.has_result = false → Trả về X
+
+Format:
+{
+  "PHASE_4": {
+    "analysis": {
+      "A": "Phân tích logic của choice A",
+      "B": "Phân tích logic của choice B",
+      "C": "Phân tích logic của choice C",
+      "D": "Phân tích logic của choice D",
+      "...": "..."
+    },
+    "final_answer": "A"
+  }
+────────────────────────────────
+DỮ LIỆU ĐẦU VÀO
+{
+"question": "{question}",
+"choices": "{choices}"
+}
+
+"""
+
+STEM_PROMPT_ANSWER_VALIDATION = """
+Bạn là mô hình chuyên gia đánh giá và phân tích các đáp án STEM
+(Toán, Lý, Hóa, Sinh, Thống kê, Công nghệ, Kinh tế kỹ thuật).
+
+────────────────────────────────
+NHIỆM VỤ CUỐI CÙNG (BẮT BUỘC)
+→ Xác định CHÍNH XÁC đáp án ĐÚNG NHẤT trong danh sách input.choices.
+→ Đáp án cuối cùng PHẢI là NGUYÊN VĂN của lựa chọn trong choices.
+
+────────────────────────────────
+BẢN CHẤT BÀI TOÁN (ANSWER_DRIVEN)
+
+• Mỗi choice là một PHÁT BIỂU / NHẬN ĐỊNH / KẾT LUẬN HOÀN CHỈNH.
+• KHÔNG tồn tại một “kết quả chuẩn” nếu không xét từng choice.
+• Nhiệm vụ là:
+  – Phân tích nội dung khoa học của TỪNG choice
+  – Xác định choice nào PHÙ HỢP với question
+
+────────────────────────────────
+NGUYÊN TẮC BẮT BUỘC
+
+1. Phải đọc kỹ question và TOÀN BỘ choices.
+2. Phải phân tích từng choice như một giả thuyết độc lập.
+3. KHÔNG được giải bài toán theo hướng “tìm một kết quả chung rồi đối chiếu”.
+4. KHÔNG được tạo ra đáp án mới ngoài choices.
+5. Không được giả định đề bài sai, nhầm đơn vị hay lỗi ra đề.
+6. Không được loại trừ choice chỉ vì “không giống kết quả quen thuộc”.
+7. Chỉ sử dụng:
+   – Định luật
+   – Mô hình
+   – Quy luật STEM chuẩn
+   để đánh giá tính đúng/sai của từng phát biểu.
+
+────────────────────────────────
+ĐỊNH DẠNG BẮT BUỘC
+
+* Chỉ trả về DUY NHẤT một JSON.
+* Không thêm bất kỳ văn bản nào ngoài JSON.
+* JSON gồm đúng 3 PHASE theo mô tả dưới đây.
+
+────────────────────────────────
+PHASE_1 - PHÂN TÍCH CÂU HỎI & TIÊU CHÍ ĐÁNH GIÁ
+
+Mục tiêu:
+• Xác định câu hỏi đang yêu cầu ĐIỀU KIỆN ĐÚNG GÌ.
+• Xác định TIÊU CHÍ KHOA HỌC để đánh giá các choices.
+
+BẮT BUỘC THỰC HIỆN:
+
+1. Xác định loại câu hỏi
+• Câu hỏi yêu cầu:
+  – Chọn phát biểu đúng?
+  – Nhận định đúng?
+  – Hiện tượng xảy ra?
+  – Kết luận hợp lý nhất?
+• Ghi rõ: câu hỏi mang tính ĐỊNH TÍNH hay ĐỊNH LƯỢNG.
+
+2. Trích xuất tiêu chí đánh giá
+• Liệt kê các điều kiện khoa học mà một choice ĐÚNG phải thỏa mãn.
+• Bao gồm:
+  – Điều kiện vật lý / hóa học / sinh học
+  – Điều kiện giới hạn / trạng thái / môi trường
+• KHÔNG xét từng choice ở phase này.
+
+Format:
+{
+  "PHASE_1": {
+    "question_type": "...",
+    "evaluation_criteria": [
+      "Tiêu chí khoa học 1",
+      "Tiêu chí khoa học 2"
+    ]
+  }
+}
+
+────────────────────────────────
+PHASE_2 - PHÂN TÍCH TỪNG CHOICE
+
+Mục tiêu:
+• Đánh giá ĐỘ PHÙ HỢP của MỖI choice với các tiêu chí ở PHASE_1.
+
+Yêu cầu:
+• Mỗi choice phải được phân tích RIÊNG BIỆT.
+• Không so sánh choice với nhau ở phase này.
+• Không kết luận đáp án cuối cùng.
+
+Format:
+{
+  "PHASE_2": {
+    "analysis": {
+      "A": "Phân tích khoa học của choice A",
+      "B": "Phân tích khoa học của choice B",
+      "C": "Phân tích khoa học của choice C",
+      "D": "Phân tích khoa học của choice D",
+      "...": "..."
+    }
+  }
+}
+
+────────────────────────────────
+PHASE_3 - KẾT LUẬN CUỐI CÙNG
+
+Mục tiêu:
+• Dựa trên PHASE_2 để chọn choice ĐÚNG NHẤT.
+• Nếu nhiều choice đúng một phần → chọn choice phù hợp NHẤT với question.
+
+Format:
+{
+  "PHASE_3": {
+    "final_answer": "A"
+  }
+}
+
+────────────────────────────────
+DỮ LIỆU ĐẦU VÀO
+{
+  "question": "{question}",
+  "choices": "{choices}"
+}
+
+"""
+
+STEM_SECOND_THINK =  """
+Bạn là mô hình STEM – chuyên gia SUY LUẬN TỪ ĐÁP ÁN (ANSWER-DRIVEN REASONING).
+
+Nhiệm vụ của bạn là:
+→ Phân tích và đánh giá TẤT CẢ các đáp án đã cho
+→ BẮT BUỘC chọn CHÍNH XÁC 1 đáp án cuối cùng
+→ KHÔNG tạo đáp án mới
+→ final_answer PHẢI là NHÃN (key) của choice duy nhất (ví dụ: "A", "B", "C", "D", "E", "F", ...)
+
+Luôn giả định:
+→ Trong danh sách choices LUÔN tồn tại đáp án đúng hoặc hợp lý nhất.
+
+────────────────────────────────
+INPUT
+
+{
+  "question": "{question}",
+  "choices": {
+    "A": "...",
+    "B": "...",
+    "C": "...",
+    "D": "...",
+    "...": "..."
+  }
+} 
+
+────────────────────────────────
+NGUYÊN TẮC SUY LUẬN CỐT LÕI
+
+1. KHÔNG loại bỏ đáp án ngay từ đầu.
+2. Với MỖI choice:
+   - PHẢI giả sử choice đó là ĐÚNG
+   - PHẢI xây dựng một chuỗi suy luận hoàn chỉnh để chứng minh nó đúng
+3. ĐƯỢC PHÉP:
+   - Giả định điều kiện ẩn phổ biến (chuẩn ngành, quy ước)
+   - Giả định cách ra đề không chặt nhưng thường gặp
+   - Thực hiện phép tính đầy đủ
+4. KHÔNG ĐƯỢC:
+   - Nói “không đủ dữ kiện”
+   - Nói “đề bài sai”
+   - Bỏ qua một choice bất kỳ
+
+────────────────────────────────
+CẤU TRÚC SUY LUẬN BẮT BUỘC (PHASES)
+
+### PHASE_1 — PHÂN TÍCH DỮ KIỆN & KHOẢNG TRỐNG GIẢ ĐỊNH
+
+Mục tiêu:
+* Xác định lĩnh vực bài toán
+* Liệt kê đầy đủ các công thức, định luật, chuẩn mực liên quan
+
+BẮT BUỘC thực hiện:
+* Tách rõ:
+  – Dữ kiện đã cho trực tiếp trong đề
+  – Dữ kiện CHƯA cho nhưng CẦN THIẾT để giải
+
+Nguyên tắc:
+* KHÔNG kết luận dữ kiện là “đầy đủ”
+* KHÔNG tự gán giá trị cho dữ kiện thiếu
+* KHÔNG loại trừ bất kỳ choice nào
+* KHÔNG đánh giá đúng/sai
+
+Nguyên tắc "Tôn trọng đề bài":
+- Tuyệt đối KHÔNG giả định đề sai, lỗi đánh máy hay nhầm đơn vị.
+- Coi mọi con số trong đề là Bất biến. Nếu kết quả không khớp, đó là do Thiếu thông tin ẩn, không phải do đề sai.
+
+Giới hạn giả định:
+* Chỉ được coi đề bài là **THIẾU THÔNG TIN**
+* TUYỆT ĐỐI KHÔNG giả định:
+  – Đề cho sai số
+  – Nhầm đơn vị
+  – Lỗi đánh máy
+  – Lỗi ra đề
+  
+---
+
+### PHASE_2 — SUY LUẬN GIẢ ĐỊNH (CÔ LẬP CHO TỪNG ĐÁP ÁN)
+
+Thực hiện ĐỘC LẬP cho TẤT CẢ các choice (theo đúng key trong input.choices)
+1. Với MỖI choice:
+  * GIẢ SỬ choice đó là ĐÚNG
+  * Xác định các **dữ kiện còn thiếu** và **biến trung gian** cần thiết để suy ra choice
+2. Cho phép trong phase này:
+  * Suy ra các biến trung gian theo CHUẨN LĨNH VỰC, ví dụ:
+    – Thời gian khấu hao
+    – Tỷ lệ phân bổ (ví dụ: số năm đã sử dụng / tổng số năm)
+    – Phương pháp chuẩn (đường thẳng, phân bổ đều, v.v.)
+3. Giả định được phép:
+  * Chỉ là **thiếu thông tin**
+  * Phải là:
+    - Các tham số bị thiếu
+    – Phổ biến trong lĩnh vực
+    – Không mâu thuẫn với dữ kiện đề bài
+    – Không giả định đề cho sai số, sai khái niệm hay nhầm thuật ngữ
+4. Xây dựng **một chuỗi suy luận hợp lý duy nhất**:
+  * Dữ kiện đã cho + giả định thiếu = choice
+  * Bao gồm công thức, biến trung gian, phép tính (nếu có)
+5. Nếu không thể tìm ra chuỗi suy luận hợp lý:
+  → Ghi: "Không tìm được chuỗi suy luận hợp lý cho choice này"
+6. KHÔNG so sánh với choice khác.
+7. KHÔNG giả định đề sai.
+8. KHÔNG lặp lại chuỗi suy luận vô nghĩa.
+
+* Nguyên tắc "Tôn trọng đề bài":
+- Tuyệt đối KHÔNG giả định đề sai, lỗi đánh máy hay nhầm đơn vị.
+- Coi mọi con số trong đề là Bất biến. Nếu kết quả không khớp, đó là do Thiếu thông tin, không phải do đề sai.
+
+* Nguyên tắc:
+* KHÔNG so sánh với choice khác
+* KHÔNG đánh giá hợp lý / không hợp lý ở phase này
+
+---
+
+### PHASE_3 — ĐÁNH GIÁ TÍNH HỢP LÝ
+
+Với MỖI choice:
+* Đánh giá tập giả định ở PHASE_2:
+  - Có tính toán sai không?
+  – Mức độ phổ biến trong lĩnh vực?
+  – Có phải chuẩn ngầm (default) không?
+  – Có phù hợp bối cảnh đề không?
+  – Có mâu thuẫn dữ kiện không?
+
+Một choice bị coi là yếu nếu:
+- Tính toán sai
+- Cần nhiều giả định không phổ biến
+- Hoặc giả định quá đặc thù
+
+Nguyên tắc:
+- Không so sánh trực tiếp giữa các choices
+- Chỉ đánh giá nội tại từng choice
+
+---
+
+### PHASE_4 — SO SÁNH & CHỌN ĐÁP ÁN CUỐI
+
+Thực hiện:
+* So sánh TẤT CẢ choices dựa trên:
+  – Tính nhất quán logic & toán học (Ưu tiên)
+  – Số lượng giả định
+  – Mức độ phổ biến của giả định
+  – Chuẩn mực lĩnh vực
+
+* Loại các choice:
+  – Giả định quá đặc thù
+  – Kém chuẩn mực hơn choice khác
+
+* Chọn:
+→ Choice có tập giả định **ít và phổ biến nhất**
+
+────────────────────────────────
+ĐỊNH DẠNG OUTPUT (JSON DUY NHẤT)
+
+{
+  "PHASE_1": {
+    "problem_type": "...",
+    "relevant_principles": ["...", "..."],
+    "given_data": ["..."],
+    "missing_data": ["..."]
+  },
+  "PHASE_2": {
+    "assumption_based_reasoning": {
+      "A": "...",
+      "B": "...",
+      "C": "...",
+      "D": "...",
+      "...": "..."
+    }
+  },
+  "PHASE_3": {
+    "reasonableness_evaluation": {
+      "A": "...",
+      "B": "...",
+      "C": "...",
+      "D": "...",
+      "...": "..."
+    }
+  },
+  "PHASE_4": {
+    "final_answer": "B"
+  }
+}
+"""
