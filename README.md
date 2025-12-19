@@ -190,8 +190,18 @@ The STEM module (`stem_solver/`) handles questions in Science, Technology, Engin
 
 ## Reference_data
 
-## Crawl_data_flow
+## Data Collection & Processing
+We used three external datasets to build the RAG vector search layer:
+- Hugging Face – VTSNLP/base_vbpl_full (135k Vietnamese legal documents),
+- Hugging Face – VTSNLP/base_yTe (65.2k Vietnamese medical documents),
+- Crawled thuvienphapluat data (720 resolutions, 2022–2025).
 
+The datasets were not merged into a single structure.
+Only the 'text' field was extracted from each dataset type for further processing.
+The extracted texts were cleaned and chunked, then converted into embedding vectors.
+Each dataset was indexed separately using Faiss IndexFlatIP, chosen because the total data volume is extremely large and this index type supports efficient scalable similarity search.
+
+Final output: three independent IndexFlatIP vector databases (legal, medical, resolutions) ready for RAG retrieval.
 ## Prerequisites
 - Python 3.8+
 - pip (or conda)
