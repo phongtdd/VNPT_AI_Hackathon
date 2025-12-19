@@ -7,6 +7,7 @@ Complete pipeline for processing data, chunking, building a FAISS vector databas
 - [Components](#components)
 - [Data Flow](#data-flow)
 - [STEM Processing Pipeline](#stem-processing-pipeline)
+- [General Pipeline](#general-pipeline)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -36,6 +37,88 @@ Complete pipeline for processing data, chunking, building a FAISS vector databas
    - For others: Direct LLM prediction.
 5. **Post-Processing**: Extract answer letters (A/B/C/...), handle errors.
 6. **Output**: CSV with qid and predicted answer.
+
+## General Pipeline
+flowchart TD
+
+    %% Input
+    U[User MCQ question and options and context]
+    U --> PRE[Preprocessing]
+
+    %% Classification
+    PRE --> CLF[Question Classifier]
+
+    %% Routing
+    CLF -->|Precision Critical| PC_ENTRY
+    CLF -->|RAG| RAG_ENTRY
+    CLF -->|Multi Domain| MD_ENTRY
+    CLF -->|STEM| STEM_ENTRY
+
+    %% Precision Critical
+    subgraph PRECISION_CRITICAL
+        PC_ENTRY --> PC_OUT[Select refusal option]
+    end
+
+    %% RAG branch
+    subgraph RAG
+        RAG_ENTRY --> RG1[Split given context]
+        RG1 --> RG2[Embed question]
+        RG2 --> RG3[Embed chunks]
+        RG3 --> RG4[Similarity retrieval]
+        RG4 --> RG5[Large model answering]
+        RG5 --> RAG_OUT[RAG answer]
+    end
+
+    %% Multi Domain branch
+    subgraph MULTI_DOMAIN
+        MD_ENTRY --> C{Need RAG?}
+        C -->|No| L1[Send Question to LLM]
+        C -->|Yes| S[Search Vector DB]
+        S --> D{DB Contains Knowledge?}
+        D -->|No| L2[Skip RAG and send Question to LLM]
+        D -->|Yes| R[RAG Retrieval]
+        R --> MD_OUT[LLM Answer Using Retrieved Context]
+    end
+
+    %% STEM branch
+    subgraph STEM
+        STEM_ENTRY --> ST1[Classify]
+        ST1 -->|Question-Driven| ST2[Question-Driven Mode]
+        ST1 --> |Answer Validation| ST3[Answer Validation Mode]
+        ST2 --> ST_OUT[STEM answer]
+        ST3 --> ST_OUT
+    end
+
+    %% Post processing
+    PC_OUT --> POST[Post processing]
+    RAG_OUT --> POST
+    MD_OUT --> POST
+    ST_OUT --> POST
+
+    POST --> FINAL[Final Answer]
+
+    %% ============================================
+    %% === COLOR STYLES ===========================
+    %% ============================================
+
+    %% Category blocks
+    classDef pc fill:#f8d7da,stroke:#c53030,stroke-width:1px,color:#000;
+    classDef rag fill:#d1ecf1,stroke:#0c5460,stroke-width:1px,color:#000;
+    classDef md fill:#fff3cd,stroke:#856404,stroke-width:1px,color:#000;
+    classDef stem fill:#e2e3e5,stroke:#6c757d,stroke-width:1px,color:#000;
+
+    %% Special highlight
+    classDef post fill:#d4edda,stroke:#155724,stroke-width:1px,color:#000;
+    classDef inputNode fill:#fde2ff,stroke:#7a057a,stroke-width:1px,color:#000;
+
+    %% Assign classes
+    class U,PRE,CLF inputNode;
+    class PC_ENTRY,PC_OUT pc;
+    class RAG_ENTRY,RG1,RG2,RG3,RG4,RG5,RAG_OUT rag;
+    class MD_ENTRY,C,L1,S,D,L2,R,MD_OUT md;
+    class STEM_ENTRY,ST1,ST2,ST_OUT,ST3, stem;
+    class POST,FINAL post;
+
 
 ## STEM Processing Pipeline
 
