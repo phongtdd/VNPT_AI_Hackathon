@@ -46,7 +46,7 @@ The STEM module (`stem_solver/`) handles questions in Science, Technology, Engin
   - **Question-Driven** – solve independently of the choices, then compare with choices.
   - **Answer-Validation (Choice-Driven)** – solve while **considering each choice as a hypothesis**.
 - **Multi-Phase Reasoning**: Breaks down solving into phases for clarity and verification.
-- **Fallback Mechanism**: If initial solving fails, uses deeper reasoning with assumptions.
+- **Fallback Mechanism**: Activated when the model's generated result does not match any of the given choices. This usually indicates that the model could not extract some hidden knowledge needed for calculation, or the problem is missing necessary data.
 - **Robustness**: Handles retries, JSON parsing, and edge cases (e.g., approximations, rounding).
 
 ### Detailed Flow
@@ -68,46 +68,40 @@ The STEM module (`stem_solver/`) handles questions in Science, Technology, Engin
 - **PHASE_4**: Select final answer corresponding to one of the choices (`A/B/C/...` or `"X"` if no match).
 
 ##### Answer-Validation Mode (Choice-Driven) (`STEM_PROMPT_ANSWER_VALIDATION`)
-- **PHASE_1**: Identify question type and evaluation criteria.
+- **PHASE_1**: Identify question type, evaluation criteria, and list all required knowledge, formulas, laws, or models needed to reason about the problem.
 - **PHASE_2**: For **each choice**:
   - Assume the choice is correct.
-  - Perform necessary calculations or reasoning.
-  - Evaluate if the choice satisfies the problem constraints.
-- **PHASE_3**: Select the choice that best fits the problem.
+  - Perform all necessary calculations, reasoning, or simulations based on PHASE_1.
+  - Include approximations, unit conversions, or equivalent representations if needed.
+  - Write all steps explicitly and output a **final result or logical conclusion** for the choice (without comparing to other choices yet).
+- **PHASE_3**: Validate each choice by checking if the result from PHASE_2 satisfies the criteria from PHASE_1.
+  - Analyze each choice independently.
+  - Evaluate its compatibility with the problem and reasoning.
+- **PHASE_4**: Select the choice that best fits the problem.
+  - Output the **letter corresponding to the choice**.
+  - If no choice is clearly correct, return `"X"`.
 
 #### 4. Fallback / Second-Think
-- Use `STEM_SECOND_THINK` for assumption-based reasoning if Question-Driven fails.
-- **PHASE_1**: Re-analyze requirements and constraints.
-- **PHASE_2**: For each choice, assume it is correct, propose assumptions, re-solve.
-- **PHASE_3**: Evaluate reasonableness of assumptions.
-- **PHASE_4**: Select the answer with the most reasonable assumptions.
+- Can only be activated when set `mode = 'strict'`, meaning the final answer must match one of the given choices. 
+- Use `STEM_SECOND_THINK` for assumption-based reasoning if Question-Driven solving fails. This is typically activated when the model's generated result does not match any of the given choices, indicating that the model could not extract hidden knowledge or the problem lacks necessary data, leads to false result. In this phase, each choice is treated as a hypothesis, reasonable assumptions are made, and calculations or reasoning are repeated to select the choice most consistent with the problem and assumptions.
+- **PHASE_1**: Re-analyze the requirements, constraints, and relevant knowledge.
+- **PHASE_2**: For each choice, assume it is correct, propose reasonable assumptions, and re-solve the problem using calculations or logical reasoning.
+- **PHASE_3**: Evaluate the reasonableness and consistency of the assumptions for each choice.
+- **PHASE_4**: Select the answer corresponding to the choice with the most reasonable assumptions.
+
 
 #### 5. Post-Processing
 - Parse JSON output, extract `final_answer`.
 - Retry on errors (up to `max_retries`).
 - Return answer letter or `"X"` if unresolved.
 
-### Example
-
-**Question**: "A planet has uniform density and radius R. Gravity at surface is g. What is gravity at distance R/2 from center?"  
-**Choices**: ["g/4", "g/2", "g/sqrt(2)", "g/3"]
-
-- **Mode**: Question-Driven  
-- PHASE_1: Identify formula \( g \propto 1/r^2 \)  
-- PHASE_2: Calculate \( g' = g/4 \)  
-- PHASE_3: Compare with choices  
-- PHASE_4: Answer `"A"`
-
-> In **Answer-Validation Mode**, the solver would compute the gravity assuming each choice is correct, then select the one consistent with the physics formula.
-
 ### Prompts Used
 - `STEM_CLASSIFY_PROMPT`: Mode selection
 - `STEM_PROMPT_QUESTION_DRIVEN`: 4-phase independent solving
-- `STEM_PROMPT_ANSWER_VALIDATION`: 3-phase choice-driven solving
+- `STEM_PROMPT_ANSWER_VALIDATION`: 4-phase choice-driven solving
 - `STEM_SECOND_THINK`: 4-phase fallback with assumption reasoning
 
 ### Notes
-- **Answer-Validation** is **not merely correctness checking**; it still requires calculation or reasoning for each choice.  
 - This pipeline ensures high accuracy by mimicking structured, human-like expert reasoning.
 
 ## Reference_data
