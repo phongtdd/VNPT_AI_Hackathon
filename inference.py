@@ -17,6 +17,7 @@ from prompt.agent_prompt import (
 from RAG.utils import DecisionResponse
 from utils.helper import load_separated_data, load_single_file
 from utils.post_processing import model_output2letter
+from stem_solver.infer import solve_stem_question
 
 response_format = {
     "type": "json_schema",
@@ -40,11 +41,9 @@ def infer(test_case, llm, label_config, *, gate_llm=None, answer_llm=None):
 
     # ---- STEM ----
     if label_config["llm_type"] == "stem":
-        user_prompt = json.dumps(
-            {"question": test_case["question"], "choices": test_case["choices"]},
-            ensure_ascii=False,
-        )
-        return llm.get_single_answer_letter(user_prompt)
+        question = test_case["question"]
+        choices = test_case["choices"]
+        return solve_stem_question(question, choices)
 
     # ---- Default ----
     raw = llm.predict(
