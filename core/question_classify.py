@@ -1,7 +1,7 @@
 import argparse
 import json
 import re
-from typing import Any, Callable, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from tqdm import tqdm
 
@@ -25,7 +25,7 @@ def question_classify(dataset: list[dict[str, Any]], llm: LLM_VNPTAI):
     return result
 
 
-def classify_rag(questions: List[Dict[str, Any]]):
+def classify_rag(questions: list[dict[str, Any]]):
     RAG_PREFIX_PATTERN = re.compile(r"^\s*đoạn\s+thông\s+tin\s*:\s*", re.IGNORECASE)
 
     rag_question = []

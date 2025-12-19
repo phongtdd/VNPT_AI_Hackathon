@@ -1,8 +1,6 @@
 import numpy as np
 
-
-
-def _split_paragraph(text):
+def _split_paragraph(text: str) -> list[str]:
     return text.split("\n\n")
 
 
@@ -14,7 +12,7 @@ def _cosine_similarity(a, b):
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
 
 
-def top_similarity(question, context, top_k=None):
+def top_similarity(question: str, context: str, top_k: int  = 3) -> list[tuple[str, float]]:
     from core.llm_interface import Embedding_VNPTAI
 
     embedding_model = Embedding_VNPTAI(embedding_name="LLM embedings")

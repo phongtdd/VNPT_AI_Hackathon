@@ -137,6 +137,7 @@ def main():
 
     print(f"🔹 Loading dataset: {dataset_name} [{split}]")
     ds = load_dataset(dataset_name)[split]
+    # ds = load_dataset("json", data_files=dataset_name, split=split)
 
     safe_dataset = safe_name(dataset_name)
     out_path = os.path.join(args.out_dir, f"{safe_dataset}.jsonl")

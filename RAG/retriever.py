@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 
 import faiss
-import numpy as np
 
 
 def _load_jsonl(path: Path):
