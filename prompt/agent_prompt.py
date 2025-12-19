@@ -770,15 +770,15 @@ Chỉ phân loại bài toán theo cách sử dụng các choices.
 
 PHÂN LOẠI BẮT BUỘC (CHỈ CHỌN 1):
 
-1. ANSWER_VALIDATION
-   – Mỗi choice là một phát biểu/nhận định hoàn chỉnh.
-   – Cần phân tích nội dung các phát biểu để xác định cái nào đúng.
-   – Không tồn tại một kết quả duy nhất nếu không xét choices.
-
-2. QUESTION_DRIVEN
-   – Đề bài xác định rõ đại lượng/hiện tượng cần tìm.
-   – Có thể giải bài toán độc lập với choices.
-   – Choices chỉ là các biểu diễn khác nhau của kết quả.
+1. QUESTION_DRIVEN
+   – Đề bài xác định rõ đại lượng, biến số hoặc hiện tượng cần tìm.
+   – Có thể giải độc lập với choices.
+   – Choices chỉ là các cách biểu diễn kết quả, dùng để chọn đáp án cuối cùng.
+   
+2. ANSWER_VALIDATION
+   – Câu hỏi không thể giải hoàn toàn mà không xét các lựa chọn.
+   – Mỗi choice là một giả thuyết hoặc phương án cần kiểm chứng.
+   – Phải dựa vào choices để xác định đáp án.
 
 QUY TẮC:
 * KHÔNG giải bài toán.
@@ -999,16 +999,16 @@ Bạn là mô hình chuyên gia đánh giá và phân tích các đáp án STEM
 ────────────────────────────────
 NHIỆM VỤ CUỐI CÙNG (BẮT BUỘC)
 → Xác định CHÍNH XÁC đáp án ĐÚNG NHẤT trong danh sách input.choices.
-→ Đáp án cuối cùng PHẢI là NGUYÊN VĂN của lựa chọn trong choices.
+→ Đáp án cuối cùng PHẢI là  **chữ cái tương ứng của choice** (A/B/C/...). trong choices.
 
 ────────────────────────────────
 BẢN CHẤT BÀI TOÁN (ANSWER_DRIVEN)
 
-• Mỗi choice là một PHÁT BIỂU / NHẬN ĐỊNH / KẾT LUẬN HOÀN CHỈNH.
-• KHÔNG tồn tại một “kết quả chuẩn” nếu không xét từng choice.
-• Nhiệm vụ là:
-  – Phân tích nội dung khoa học của TỪNG choice
-  – Xác định choice nào PHÙ HỢP với question
+* Mỗi choice là một phát biểu/nhận định/kết luận hoàn chỉnh.
+* Không tồn tại kết quả duy nhất nếu không xét từng choice.
+* Nhiệm vụ là:
+  – Phân tích logic, phép tính, mô hình hoặc reasoning của từng choice dựa trên domain.
+  – Xác định choice nào phù hợp nhất với question.
 
 ────────────────────────────────
 NGUYÊN TẮC BẮT BUỘC
@@ -1036,71 +1036,102 @@ NGUYÊN TẮC BẮT BUỘC
 PHASE_1 - PHÂN TÍCH CÂU HỎI & TIÊU CHÍ ĐÁNH GIÁ
 
 Mục tiêu:
-• Xác định câu hỏi đang yêu cầu ĐIỀU KIỆN ĐÚNG GÌ.
-• Xác định TIÊU CHÍ KHOA HỌC để đánh giá các choices.
+* Xác định loại câu hỏi (Chọn phát biểu đúng? Nhận định? Hiện tượng? Kết luận?).
+* Liệt kê các tiêu chí cần thỏa mãn để choice đúng.
+* Liệt kê **toàn bộ tri thức, công thức, định luật, mô hình, hoặc kiến thức nền tảng** cần để đánh giá và giải quyết câu hỏi.
+* Bắt buộc viết ra công thức đầy đủ nếu có, không chỉ gọi tên.
+* KHÔNG phân tích choice ở phase này.
 
 BẮT BUỘC THỰC HIỆN:
 
 1. Xác định loại câu hỏi
-• Câu hỏi yêu cầu:
+* Câu hỏi yêu cầu:
   – Chọn phát biểu đúng?
   – Nhận định đúng?
   – Hiện tượng xảy ra?
   – Kết luận hợp lý nhất?
-• Ghi rõ: câu hỏi mang tính ĐỊNH TÍNH hay ĐỊNH LƯỢNG.
+* Ghi rõ: câu hỏi mang tính ĐỊNH TÍNH hay ĐỊNH LƯỢNG.
 
 2. Trích xuất tiêu chí đánh giá
-• Liệt kê các điều kiện khoa học mà một choice ĐÚNG phải thỏa mãn.
-• Bao gồm:
+* Liệt kê các điều kiện khoa học mà một choice ĐÚNG phải thỏa mãn.
+* Bao gồm:
   – Điều kiện vật lý / hóa học / sinh học
   – Điều kiện giới hạn / trạng thái / môi trường
-• KHÔNG xét từng choice ở phase này.
+* KHÔNG xét từng choice ở phase này.
+
+3. Nêu ra đầy đủ các kiến thức liên quan caanf thiết để giải quyết câu hỏi
 
 Format:
 {
   "PHASE_1": {
     "question_type": "...",
     "evaluation_criteria": [
-      "Tiêu chí khoa học 1",
-      "Tiêu chí khoa học 2"
+      "Tiêu chí 1",
+      "Tiêu chí 2"
+    ],
+    "required_knowledge": [
+      "Tri thức / công thức / định luật / mô hình 1",
+      "Tri thức / công thức / định luật / mô hình 2"
     ]
   }
 }
 
 ────────────────────────────────
-PHASE_2 - PHÂN TÍCH TỪNG CHOICE
+PHASE_2 - THỰC HIỆN TÍNH TOÁN / REASONING
 
 Mục tiêu:
-• Đánh giá ĐỘ PHÙ HỢP của MỖI choice với các tiêu chí ở PHASE_1.
+* Bắt buộc **thực hiện tất cả các phép tính, mô phỏng, reasoning** dựa trên PHASE_1 nếu bài toán có dữ liệu hoặc giả thiết định lượng.
+* Bao gồm xấp xỉ, đơn vị khác, biểu diễn tương đương nếu cần.
+* Viết ra đầy đủ tất cả các bước và **tính toán thực tế**, không chỉ liệt kê bước.
+* Kết quả là **giá trị hoặc kết luận logic cuối cùng**, chưa so sánh với choice.
 
 Yêu cầu:
-• Mỗi choice phải được phân tích RIÊNG BIỆT.
-• Không so sánh choice với nhau ở phase này.
-• Không kết luận đáp án cuối cùng.
+* Mỗi choice phải được phân tích riêng biệt.
+* Không so sánh choice với nhau ở phase này.
+* Không kết luận đáp án cuối cùng.
 
 Format:
 {
   "PHASE_2": {
+    "solution_steps": [
+        "Bước 1: [thực hiện phép tính / reasoning thực tế]",
+        "Bước 2: [tính toán / suy luận tiếp theo]",
+        ...
+    ],
+    "final_result": "Giá trị số hoặc kết luận logic cuối cùng từ phép tính / reasoning"
+  }
+}
+────────────────────────────────
+PHASE_3 - KIỂM ĐỊNH TỪNG CHOICE
+Mục tiêu:
+* Kiểm định từng choice dựa trên kết quả PHASE_2 và tiêu chí PHASE_1 và câu hỏi.
+* Mỗi choice được phân tích như một giả thuyết độc lập.
+* Đánh giá mức độ phù hợp của choice với kết quả và tiêu chí.
+* Có thể nêu xấp xỉ, đơn vị khác, biểu diễn tương đương nếu cần.
+
+Format:
+{
+  "PHASE_3": {
     "analysis": {
-      "A": "Phân tích khoa học của choice A",
-      "B": "Phân tích khoa học của choice B",
-      "C": "Phân tích khoa học của choice C",
-      "D": "Phân tích khoa học của choice D",
+      "A": ["Đánh giá tính hợp lệ / phù hợp của choice A"],
+      "B": ["Đánh giá tính hợp lệ / phù hợp của choice B"],
+      "C": ["Đánh giá tính hợp lệ / phù hợp của choice C"],
+      "D": ["Đánh giá tính hợp lệ / phù hợp của choice D"],
       "...": "..."
     }
   }
 }
 
 ────────────────────────────────
-PHASE_3 - KẾT LUẬN CUỐI CÙNG
-
+PHASE_4 - KẾT LUẬN CUỐI CÙNG
 Mục tiêu:
-• Dựa trên PHASE_2 để chọn choice ĐÚNG NHẤT.
-• Nếu nhiều choice đúng một phần → chọn choice phù hợp NHẤT với question.
+* Dựa trên PHASE_3, chọn choice phù hợp nhất với question và tiêu chí.
+* Trả về **chữ cái tương ứng với choice**.
+* Nếu không xác định được, trả về "X".
 
 Format:
 {
-  "PHASE_3": {
+  "PHASE_4": {
     "final_answer": "A"
   }
 }
@@ -1111,7 +1142,6 @@ DỮ LIỆU ĐẦU VÀO
   "question": "{question}",
   "choices": "{choices}"
 }
-
 """
 
 STEM_SECOND_THINK =  """
