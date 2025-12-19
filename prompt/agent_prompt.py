@@ -650,13 +650,13 @@ MULTI_DOMAIN_PROMPT = """
 STEM_PROMPT = """
 Bạn là mô hình chuyên gia giải các bài toán STEM (Toán, Lý, Hóa, Sinh, Thống kê, Công nghệ, Kinh tế kỹ thuật).
 
-  ────────────────────────────────
-  NHIỆM VỤ CUỐI CÙNG (BẮT BUỘC)
-  → Chọn CHÍNH XÁC 1 đáp án đúng nhất từ danh sách input.choices.
-  → Đáp án cuối cùng PHẢI là NGUYÊN VĂN của lựa chọn trong choices.
+────────────────────────────────
+NHIỆM VỤ CUỐI CÙNG (BẮT BUỘC)
+→ Chọn CHÍNH XÁC 1 đáp án đúng nhất từ danh sách input.choices.
+→ Đáp án cuối cùng PHẢI là NGUYÊN VĂN của lựa chọn trong choices.
 
-  ────────────────────────────────
-  NGUYÊN TẮC BẮT BUỘC
+────────────────────────────────
+NGUYÊN TẮC BẮT BUỘC
 
 1. Phải đọc kỹ câu hỏi và TOÀN BỘ các choices.
 2. Phải giải bài toán dựa trên lập luận khoa học, công thức, định luật hoặc mô hình phù hợp.
@@ -666,12 +666,12 @@ Bạn là mô hình chuyên gia giải các bài toán STEM (Toán, Lý, Hóa, S
    * Tương đương hợp lý nhất (xét làm tròn, sai số, xấp xỉ).
 5. Kết quả PHASE_3 phải được suy ra trực tiếp từ output của PHASE_2.
 
-  ────────────────────────────────
-  ĐỊNH DẠNG BẮT BUỘC
+────────────────────────────────
+ĐỊNH DẠNG BẮT BUỘC
 
-  * Chỉ trả về DUY NHẤT một JSON.
-  * Không thêm bất kỳ văn bản nào ngoài JSON.
-  * JSON gồm đúng 3 PHASE theo mô tả dưới đây.
+* Chỉ trả về DUY NHẤT một JSON.
+* Không thêm bất kỳ văn bản nào ngoài JSON.
+* JSON gồm đúng 3 PHASE theo mô tả dưới đây.
 
 ────────────────────────────────
 PHASE_1 - PHÂN TÍCH & XÁC ĐỊNH YÊU CẦU ẨN
@@ -755,12 +755,12 @@ Format:
   }
 }
 
-  ────────────────────────────────
-  DỮ LIỆU ĐẦU VÀO
-  {
-  "question": "{question}",
-  "choices": "{choices}"
-  }
+────────────────────────────────
+DỮ LIỆU ĐẦU VÀO
+{
+"question": "{question}",
+"choices": "{choices}"
+}
 
 """
 
@@ -1159,75 +1159,169 @@ NGUYÊN TẮC SUY LUẬN CỐT LÕI
 ────────────────────────────────
 CẤU TRÚC SUY LUẬN BẮT BUỘC (PHASES)
 
-### PHASE_1 — PHÂN TÍCH DỮ KIỆN & KHOẢNG TRỐNG GIẢ ĐỊNH
+PHASE_1 - PHÂN TÍCH & XÁC ĐỊNH YÊU CẦU GIẢI TOÁN
 
 Mục tiêu:
-* Xác định lĩnh vực bài toán
-* Liệt kê đầy đủ các công thức, định luật, chuẩn mực liên quan
+* Xác định CHÍNH XÁC bản chất khoa học của câu hỏi.
+* Xác định đại lượng/hiện tượng mà đề bài THỰC SỰ yêu cầu tìm.
+* Liệt kê ĐẦY ĐỦ các điều kiện, khái niệm và quan hệ cần thiết để có thể kết luận được điều được hỏi.
 
-BẮT BUỘC thực hiện:
-* Tách rõ:
-  – Dữ kiện đã cho trực tiếp trong đề
-  – Dữ kiện CHƯA cho nhưng CẦN THIẾT để giải
+BẮT BUỘC THỰC HIỆN:
 
-Nguyên tắc:
-* KHÔNG kết luận dữ kiện là “đầy đủ”
-* KHÔNG tự gán giá trị cho dữ kiện thiếu
-* KHÔNG loại trừ bất kỳ choice nào
-* KHÔNG đánh giá đúng/sai
+1. Nhận diện loại yêu cầu của câu hỏi
+* Xác định rõ câu hỏi thuộc loại:
+  – ĐỊNH LƯỢNG (tìm giá trị số, công thức, biểu thức), hoặc
+  – ĐỊNH TÍNH (mô tả hiện tượng, xu hướng, so sánh).
+* Xác định rõ: câu hỏi đang hỏi về ĐẠI LƯỢNG NÀO / HIỆN TƯỢNG NÀO,
+  không được suy diễn sang đại lượng gần đúng hoặc liên quan.
 
-Nguyên tắc "Tôn trọng đề bài":
-- Tuyệt đối KHÔNG giả định đề sai, lỗi đánh máy hay nhầm đơn vị.
-- Coi mọi con số trong đề là Bất biến. Nếu kết quả không khớp, đó là do Thiếu thông tin ẩn, không phải do đề sai.
+2. Đọc input.choices để nhận diện phạm vi câu trả lời
+* ĐƯỢC PHÉP đọc choices để:
+  – Xác định đơn vị đang được ngầm sử dụng.
+  – Xác định dạng kết quả mong đợi (giá trị đơn, khoảng, cặp giá trị, mô tả định tính…).
+* KHÔNG được:
+  – So sánh, loại trừ hay đánh giá đúng/sai bất kỳ choice nào.
+  – Điều chỉnh cách hiểu câu hỏi để khớp choices.
 
-Giới hạn giả định:
-* Chỉ được coi đề bài là **THIẾU THÔNG TIN**
-* TUYỆT ĐỐI KHÔNG giả định:
-  – Đề cho sai số
-  – Nhầm đơn vị
-  – Lỗi đánh máy
-  – Lỗi ra đề
+3. Tách rõ dữ kiện và điều kiện
+* given_data:
+  – Liệt kê TOÀN BỘ dữ kiện xuất hiện TRỰC TIẾP trong đề bài.
+  – Không diễn giải lại, không rút gọn, không thay thế bằng mô hình khác.
+
+* missing_data:
+  – Liệt kê TẤT CẢ dữ kiện hoặc điều kiện CẦN THIẾT để kết luận được điều được hỏi,
+    bao gồm:
+    * Dữ kiện số học.
+    * Điều kiện khái niệm / vật lý / hóa học / sinh học (nếu ảnh hưởng đến kết luận).
+    * Thời gian sử dụng, thời gian sở hữu, bối cảnh câu hỏi,...
+  – Nếu thiếu điều kiện khái niệm → BẮT BUỘC phải liệt kê, kể cả khi không có phép tính.
+
+4. explicit_requirements & implicit_requirements
+* explicit_requirements:
+  – Ghi đúng và đầy đủ yêu cầu trực tiếp của đề bài, đúng đối tượng, đúng môi trường, đúng ngữ cảnh.
+  – Xác định các điều kiện, và 
+  - Không được mở rộng hoặc suy diễn.
+
+* implicit_requirements:
+  – Liệt kê các điều kiện NGẦM nhưng BẮT BUỘC phải đúng thì câu hỏi mới có nghĩa khoa học,
+    ví dụ:
+    * Thời gian
+    * Môi trường đo.
+    * Trạng thái chuẩn.
+    * Mô hình vật lý/hoá học/sinh học đang được ngầm sử dụng.
+  – Chỉ liệt kê, KHÔNG được gán giá trị.
+  - Bắt buộc 
+
+
+NGUYÊN TẮC CẤM:
+* KHÔNG kết luận dữ kiện là “đủ”.
+* KHÔNG giả định đề sai, nhầm đơn vị, lỗi ra đề.
+* KHÔNG đánh giá đúng/sai.
+* KHÔNG loại trừ bất kỳ choice nào.
+
+Format:
+{
+  "PHASE_1": {
+    "explicit_requirements": [...],
+    "implicit_requirements": [...],
+    "given_data": [...],
+    "missing_data": [...],
+  }
+}
+
+────────────────────────────────
+
+PHASE_2 — SUY LUẬN GIẢ ĐỊNH (CÔ LẬP CHO TỪNG ĐÁP ÁN)
+
+* Mục tiêu
+Với từng choice, giả sử choice là đúng, sau đó:
+  1. Phân tích input.previous_solution (đã biết là SAI) để: Xác định thiếu thông tin hoặc giả định sai đã dẫn tới kết quả sai
+  2. Từ đó, đề xuất các giả định hợp lý cần bổ sung hoặc thay thế
+  3. Dưới các giả định mới này, giải lại bài toán để suy ra choice
+
+* Thực hiện ĐỘC LẬP cho TẤT CẢ các choice (theo đúng key trong input.choices)
+
+* Với MỖI choice:
+
+BƯỚC 1 — PHÂN TÍCH LỜI GIẢI SAI & GIẢ ĐỊNH CẦN SỬA (Assumptions)
+  Dựa trên previous_solution (SAI):
+    * Xác định rõ các giả định cần bổ sung để có thể suy ra choice này từ dữ kiện đề bài:
+    - Thông tin nào đang bị thiếu
+    - Hoặc giả định ngầm nào trong previous_solution chưa đủ / không phù hợp
+    
+    * Từ đó, đề xuất các giả định hợp lý cần bổ sung hoặc thay thế, sao cho:
+      - Chỉ bổ sung thiếu thông tin
+      - Giả định phải:
+        - Phổ biến trong lĩnh vực
+        - Không mâu thuẫn với dữ kiện đề bài
+        - Không giả định đề bài sai, nhầm đơn vị hay khái niệm
+        - Không đánh giá giả định là đúng hay hợp lý ở phase này
+        - Giả định phải làm cho đáp án trở nên CHÍNH XÁC
+
+  👉 Mục tiêu bước này:
+  “Nếu thêm giả định này, thì choice sẽ chính xác.”
+
+BƯỚC 2 — GIẢI BÀI TOÁN DƯỚI GIẢ ĐỊNH (Assumption-based Solution)
+  * Giả sử tất cả các giả định ở Bước 1 đều đúng:
+    - Sử dụng dữ kiện đề bài + giả định
+    - Thiết lập công thức, biến trung gian
+    - Thực hiện phép tính / suy luận cần thiết
+    - Dẫn tới kết quả trùng khớp với choice
+  * Đưa ra lý do vì sao giả định hợp lý
+  * Không đánh giá kết quả, chỉ trình bày chuỗi suy luận.
   
----
-
-### PHASE_2 — SUY LUẬN GIẢ ĐỊNH (CÔ LẬP CHO TỪNG ĐÁP ÁN)
-
-Thực hiện ĐỘC LẬP cho TẤT CẢ các choice (theo đúng key trong input.choices)
-1. Với MỖI choice:
-  * GIẢ SỬ choice đó là ĐÚNG
-  * Xác định các **dữ kiện còn thiếu** và **biến trung gian** cần thiết để suy ra choice
-2. Cho phép trong phase này:
-  * Suy ra các biến trung gian theo CHUẨN LĨNH VỰC, ví dụ:
-    – Thời gian khấu hao
-    – Tỷ lệ phân bổ (ví dụ: số năm đã sử dụng / tổng số năm)
-    – Phương pháp chuẩn (đường thẳng, phân bổ đều, v.v.)
-3. Giả định được phép:
-  * Chỉ là **thiếu thông tin**
-  * Phải là:
-    - Các tham số bị thiếu
-    – Phổ biến trong lĩnh vực
-    – Không mâu thuẫn với dữ kiện đề bài
-    – Không giả định đề cho sai số, sai khái niệm hay nhầm thuật ngữ
-4. Xây dựng **một chuỗi suy luận hợp lý duy nhất**:
-  * Dữ kiện đã cho + giả định thiếu = choice
-  * Bao gồm công thức, biến trung gian, phép tính (nếu có)
-5. Nếu không thể tìm ra chuỗi suy luận hợp lý:
-  → Ghi: "Không tìm được chuỗi suy luận hợp lý cho choice này"
-6. KHÔNG so sánh với choice khác.
-7. KHÔNG giả định đề sai.
-8. KHÔNG lặp lại chuỗi suy luận vô nghĩa.
+BƯỚC 3 — KHÔNG TÌM ĐƯỢC CHUỖI SUY LUẬN
+  * Nếu không thể xây dựng chuỗi suy luận hoàn chỉnh (ngay cả khi bổ sung giả định hợp lý):
+  -> Ghi: "Không tìm được chuỗi suy luận hợp lý cho choice này"
 
 * Nguyên tắc "Tôn trọng đề bài":
 - Tuyệt đối KHÔNG giả định đề sai, lỗi đánh máy hay nhầm đơn vị.
 - Coi mọi con số trong đề là Bất biến. Nếu kết quả không khớp, đó là do Thiếu thông tin, không phải do đề sai.
 
 * Nguyên tắc:
-* KHÔNG so sánh với choice khác
-* KHÔNG đánh giá hợp lý / không hợp lý ở phase này
+- KHÔNG so sánh với choice khác.
+- KHÔNG giả định đề sai.
+- KHÔNG lặp lại chuỗi suy luận vô nghĩa.
 
----
+Format:
+{
+  "PHASE_2": {
+    "assumption_based_reasoning": {
+      "A": {
+        [
+          "assumptions": "...",
+          "reason": "ngắn gọn lý do",
+          "solution_under_assumptions": ["..."]
+        ]
+      },
+      "B": {
+        [
+          "assumptions": "...",
+          "reason": "ngắn gọn lý do",
+          "solution_under_assumptions": ["..."]
+        ]
+      },
+      "C": {
+        [
+          "assumptions": "...",
+          "reason": "ngắn gọn lý do",
+          "solution_under_assumptions": ["..."]
+        ]
+      },
+      "D": {
+        [
+          "assumptions": "...",
+          "reason": "ngắn gọn lý do",
+          "solution_under_assumptions": ["..."]
+        ]
+      }
+    }
+  }
+}
 
-### PHASE_3 — ĐÁNH GIÁ TÍNH HỢP LÝ
+────────────────────────────────
+
+PHASE_3 — ĐÁNH GIÁ TÍNH HỢP LÝ
 
 Với MỖI choice:
 * Đánh giá tập giả định ở PHASE_2:
@@ -1237,18 +1331,35 @@ Với MỖI choice:
   – Có phù hợp bối cảnh đề không?
   – Có mâu thuẫn dữ kiện không?
 
-Một choice bị coi là yếu nếu:
+Một giả định bị coi là yếu nếu:
 - Tính toán sai
 - Cần nhiều giả định không phổ biến
 - Hoặc giả định quá đặc thù
+- Đánh giá confidence_score với mỗi câu trả lời
+
+* Nguyên tắc "Tôn trọng đề bài":
+- Tuyệt đối KHÔNG giả định số liệu đề bài sai, lỗi đánh máy hay nhầm đơn vị.
+- Coi mọi con số trong đề là Bất biến. Nếu kết quả không khớp, đó là do Thiếu thông tin, không phải do số liệu đề sai.
 
 Nguyên tắc:
 - Không so sánh trực tiếp giữa các choices
 - Chỉ đánh giá nội tại từng choice
 
----
+Format:
+{
+  "PHASE_3": {
+    "reasonableness_evaluation": {
+      "A": "...",
+      "B": "...",
+      "C": "...",
+      "D": "...",
+      "...": "..."
+    }
+  }
+}
+────────────────────────────────
 
-### PHASE_4 — SO SÁNH & CHỌN ĐÁP ÁN CUỐI
+PHASE_4 — SO SÁNH & CHỌN ĐÁP ÁN CUỐI
 
 Thực hiện:
 * So sánh TẤT CẢ choices dựa trên:
@@ -1264,32 +1375,98 @@ Thực hiện:
 * Chọn:
 → Choice có tập giả định **ít và phổ biến nhất**
 
-────────────────────────────────
-ĐỊNH DẠNG OUTPUT (JSON DUY NHẤT)
+* BẮT BUỘC phải chọn 1 choice, không được trả về bất kỳ string nào khác
 
+Format:
+{
+  "PHASE_4": {
+    "final_answer": "B"
+  }
+}
+
+────────────────────────────────
+DỮ LIỆU ĐẦU VÀO
+{
+"question": "{question}",
+"choices": "{choices}",
+"previous_solution": {previous_solution}
+}
+
+────────────────────────────────
+Ví dụ:
+DỮ LIỆU ĐẦU VÀO
+{
+  "question": "Công ty Kennie bán một máy in với giá 31.000 đô la sau ba năm sở hữu. Máy in có chi phí ban đầu là 58.000 đô la và cơ sở khấu hao là 48.000 đô la. Giá trị sổ sách của máy in vào thời điểm bán là bao nhiêu, và lợi nhuận từ việc bán là bao nhiêu?", 
+  "choices": ["Giá trị sổ sách: 20.000 đô la; Lợi nhuận: 11.000 đô la", "Giá trị sổ sách: 29.200 đô la; Lợi nhuận: 1.800 đô la", "Giá trị sổ sách: 29.200 đô la; Lợi nhuận: 11.000 đô la", "Giá trị sổ sách: 20.000 đô la; Lợi nhuận: 1.800 đô la"],
+  "previous_solution": {
+    "solution_steps": [
+      "Tính tỷ lệ khấu hao hàng năm: (Cơ sở khấu hao) / (Thời gian sở hữu) = 48.000 / 3 = 16.000 đô la/năm",
+      "Tính giá trị sổ sách: Chi phí ban đầu - (Tỷ lệ khấu hao hàng năm * Thời gian sở hữu) = 58.000 - (16.000 * 3) = 58.000 - 48.000 = 10.000 đô la",
+      "Tính lợi nhuận: Giá bán - Giá trị sổ sách = 31.000 - 10.000 = 21.000 đô la"
+    ]
+  }
+}
+Trả về:
 {
   "PHASE_1": {
-    "problem_type": "...",
-    "relevant_principles": ["...", "..."],
-    "given_data": ["..."],
-    "missing_data": ["..."]
+    "explicit_requirements": [
+      "Tính giá trị sổ sách của máy in vào thời điểm bán",
+      "Tính lợi nhuận từ việc bán máy in"
+    ],
+    "implicit_requirements": [
+      "Sử dụng phương pháp khấu hao thẳng hàng",
+      "Không có thông tin về chi phí bảo trì hoặc sửa chữa"
+    ],
+    "given_data": [
+      "Giá bán máy in: 31.000 đô la",
+      "Chi phí ban đầu: 58.000 đô la",
+      "Cơ sở khấu hao: 48.000 đô la",
+      "Thời gian sở hữu: 3 năm"
+    ],
+    "missing_data": [
+      "Thời gian sử dụng dự kiến",
+      "Tỷ lệ khấu hao hàng năm"
+    ],
+    "solution_strategy": [
+      "Sử dụng công thức khấu hao thẳng hàng để tính giá trị sổ sách",
+      "Sử dụng công thức khấu hao tuyến tính theo thực tế sử dụng",
+      "Tính lợi nhuận bằng cách trừ giá trị sổ sách khỏi giá bán"
+    ]
   },
   "PHASE_2": {
     "assumption_based_reasoning": {
-      "A": "...",
-      "B": "...",
-      "C": "...",
-      "D": "...",
-      "...": "..."
+      "A": {
+        "assumptions": "Giả sử cơ sở khấu hao = 38.000 đô la",
+        "reason": "Giá bán = Giá trị sổ sách + Lợi nhuận = 20.000 + 11.000 = 31.000",
+        "solution_under_assumptions": "Giá trị sổ sách = 58.000 - 38.000 = 20.000; Lợi nhuận = 31.000 - 20.000 = 11.000"
+      },
+      "B": {
+        "assumptions": "Thời gian sử dụng dự kiến = 5 năm",
+        "reason": "Khấu hao = Chi phí ban đầu - Giá trị sổ sách = 58.000 - 29.200 = 28.800, phù hợp với thời gian dự kiến",
+        "solution_under_assumptions": [
+          "Khấu hao hàng năm = Cơ sở khấu hao / Thời gian sử dụng dự kiến = 48.000 / 5 = 9.600 đô la/năm",
+          "Giá trị sổ sách = Chi phí ban đầu - (Khấu hao hàng năm * Thời gian sở hữu) = 58.000 - (9.600 * 3) = 29.200 đô la",
+          "Lợi nhuận = Giá bán - Giá trị sổ sách = 31.000 - 29.200 = 1.800 đô la"
+        ]
+      },
+      "C": {
+        "assumptions": "Chỉ khấu hao 20% cơ sở khấu hao mỗi năm",
+        "reason": "Khấu hao hằng năm = (Chi phí ban đầu - Giá trị sổ sách) / Thời gian sử dụng = (58.000 - 29.200)/3 = 9.600 = 20% của cơ sở khấu hao",
+        "solution_under_assumptions": "Giá trị sổ sách = 58.000 - (48.000 * 0.2 * 3) = 29.200; Lợi nhuận = 31.000 - 29.200 = 1.800"
+      },
+      "D": {
+        "assumptions": "",
+        "reason": "Tổng lợi nhuận và giá trị sổ sách lớn hơn giá bán",
+        "solution_under_assumptions": "Không tìm được chuỗi suy luận hợp lý cho choice này"
+      }
     }
   },
   "PHASE_3": {
     "reasonableness_evaluation": {
-      "A": "...",
-      "B": "...",
-      "C": "...",
-      "D": "...",
-      "...": "..."
+      "A": "Không tuân thủ nguyên tắc 'Tôn trọng đề bài'",
+      "B": "Tập giả định phổ biến, hợp lý, không có tính toán sai",
+      "C": "Số liệu khó có thể suy ra từ choice, không hợp lý",
+      "D": "Lập luận không hợp lý"
     }
   },
   "PHASE_4": {
