@@ -1,19 +1,11 @@
-# rag/resources.py
-
 from core.llm_interface import Embedding_VNPTAI
-from RAG.retriever import build_bm25, load_faiss
+from RAG.retriever import load_faiss_multi
 
-# -------- Load FAISS  --------
-FAISS_INDEX, METADATA = load_faiss(index_dir="faiss_data")
+STORES = load_faiss_multi(index_dir="faiss_data")
 
-# -------- Corpus texts --------
-CORPUS_TEXTS = [m["text"] if "text" in m else "" for m in METADATA]
+CORPUS_TEXTS = {}
+for store in STORES:
+    name = store["name"]
+    CORPUS_TEXTS[name] = [m.get("text", "") for m in store["metadata"]]
 
-# -------- Embedder --------
-EMBEDDER = Embedding_VNPTAI(
-    embedding_name="LLM embedings",
-    max_workers=4,
-)
-
-# -------- BM25 --------
-BM25 = build_bm25(CORPUS_TEXTS)
+EMBEDDER = Embedding_VNPTAI(embedding_name="LLM embedings", max_workers=4)

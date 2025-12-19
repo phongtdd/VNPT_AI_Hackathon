@@ -3,59 +3,55 @@ from pathlib import Path
 
 import faiss
 import numpy as np
-from rank_bm25 import BM25Okapi
 
 
-def _merge_faiss_indexes(indexes: list[faiss.Index]):
-    if not indexes:
-        raise ValueError("No FAISS index to merge")
+def _load_jsonl(path: Path):
+    items = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                items.append(json.loads(line))
+            except json.JSONDecodeError as e:
+                raise ValueError(f"{path}:{line_no} invalid JSON") from e
+    return items
 
-    base = indexes[0]
 
-    for idx in indexes[1:]:
-        base.merge_from(idx, base.ntotal)
-
-    return base
-
-
-def load_faiss(index_dir: str, index_name: str | None = None):
+def load_faiss_multi(index_dir: str):
     index_dir = Path(index_dir)
+    stores = []
 
-    # ---------- Single index ----------
-    if index_name:
-        index_path = index_dir / f"{index_name}.index"
-        meta_path = index_dir / f"{index_name}_metadata.json"
+    for domain_dir in index_dir.iterdir():
+        if not domain_dir.is_dir():
+            continue
 
-        index = faiss.read_index(str(index_path))
-        with open(meta_path, "r", encoding="utf-8") as f:
-            metadata = json.load(f)
+        index_files = list(domain_dir.glob("*.index"))
+        meta_files = list(domain_dir.glob("*_metadata.jsonl"))
 
-        return index, metadata
+        if not index_files or not meta_files:
+            continue
 
-    # ---------- Multi index ----------
-    indexes = []
-    metadata = []
+        index = faiss.read_index(
+            str(index_files[0]),
+            faiss.IO_FLAG_MMAP | faiss.IO_FLAG_READ_ONLY,
+        )
 
-    for index_path in sorted(index_dir.glob("*.index")):
-        meta_path = index_path.with_name(index_path.stem + "_metadata.json")
+        metadata = _load_jsonl(meta_files[0])
 
-        idx = faiss.read_index(str(index_path))
-        indexes.append(idx)
+        stores.append(
+            {
+                "name": domain_dir.name,
+                "index": index,
+                "metadata": metadata,
+            }
+        )
 
-        with open(meta_path, "r", encoding="utf-8") as f:
-            metadata.extend(json.load(f))
-
-    if not indexes:
+    if not stores:
         raise RuntimeError("No FAISS index found")
 
-    merged_index = _merge_faiss_indexes(indexes)
-
-    return merged_index, metadata
-
-
-def build_bm25(corpus_texts):
-    tokenized = [text.lower().split() for text in corpus_texts]
-    return BM25Okapi(tokenized)
+    return stores
 
 
 def embed_query(embedder, question: str):
@@ -63,78 +59,43 @@ def embed_query(embedder, question: str):
     faiss.normalize_L2(vec)
     return vec
 
+DOMAIN_THRESHOLDS = {
+    "law": 0.75,
+    "medical": 0.5,
+    "ho_chi_minh": 0.6,
+    "civic_knowledge": 0.7,
+    "political_science": 0.7
+}
 
-def _min_max_normalize(scores):
-    min_s, max_s = min(scores), max(scores)
-    if max_s - min_s == 0:
-        return [0.0] * len(scores)
-    return [(s - min_s) / (max_s - min_s) for s in scores]
-
-
-def retrieve_context_faiss_hybrid(
+def retrieve_context_single_domain(
     question: str,
     *,
+    domain: str,
+    stores,
     embedder,
-    faiss_index,
-    metadata,
-    bm25,
     corpus_texts,
-    top_k: int = 5,
-    faiss_k: int = 20,
-    alpha: float = 0.6,  # semantic weight
-):
-    """
-    alpha ↑ → more semantic (FAISS)
-    alpha ↓ → more lexical (BM25)
-    """
+    top_k=5,
+    faiss_k=50,
+)->str:
+    global DOMAIN_THRESHOLDS
+    store = next(s for s in stores if s["name"] == domain)
 
-    # ---------- 1. FAISS semantic search ----------
     query_vec = embed_query(embedder, question)
-    faiss_scores, faiss_ids = faiss_index.search(query_vec, faiss_k)
 
-    faiss_scores = faiss_scores[0]
-    faiss_ids = faiss_ids[0]
+    # ---- FAISS search ----
+    threshold = DOMAIN_THRESHOLDS.get(domain)
+    scores, ids = store["index"].search(query_vec, faiss_k)
+    pairs = list(zip(scores[0], ids[0]))
 
-    semantic_scores = {
-        idx: float(score) for idx, score in zip(faiss_ids, faiss_scores) if idx != -1
-    }
+    # keep only scores above threshold
+    good = [(s, i) for (s, i) in pairs if i != -1 and s >= threshold]
+    good = sorted(good, reverse=True)[:top_k]
 
-    # ---------- 2. BM25 lexical search ----------
-    tokenized_query = question.lower().split()
-    bm25_raw_scores = bm25.get_scores(tokenized_query)
+    if not good:
+        return ""
 
-    # Restrict BM25 to FAISS candidates (important!)
-    lexical_scores = {idx: bm25_raw_scores[idx] for idx in semantic_scores.keys()}
+    ids = [i for (s, i) in good]
 
-    # ---------- 3. Normalize scores ----------
-    def normalize(d):
-        if not d:
-            return {}
-        vals = np.array(list(d.values()))
-        if vals.max() - vals.min() < 1e-8:
-            return {k: 0.0 for k in d}
-        return {k: (v - vals.min()) / (vals.max() - vals.min()) for k, v in d.items()}
+    texts = corpus_texts[domain]
 
-    semantic_norm = normalize(semantic_scores)
-    lexical_norm = normalize(lexical_scores)
-
-    # ---------- 4. Hybrid fusion ----------
-    hybrid_scores = {
-        idx: alpha * semantic_norm.get(idx, 0.0)
-        + (1 - alpha) * lexical_norm.get(idx, 0.0)
-        for idx in semantic_scores
-    }
-
-    # ---------- 5. Rank ----------
-    ranked_ids = sorted(
-        hybrid_scores,
-        key=lambda i: hybrid_scores[i],
-        reverse=True,
-    )[:top_k]
-
-    # ---------- 6. Build context ----------
-    contexts = []
-    for idx in ranked_ids:
-        contexts.append(corpus_texts[idx])
-
-    return "\n\n".join(contexts)
+    return "\n\n".join(texts[i] for i in ids)

@@ -12,16 +12,26 @@ from core.llm_interface import LLM_VNPTAI
 from core.question_classify import seperate_data
 from MD_LLM.multi_domain import solve_multi_domain
 from prompt.agent_prompt import (
-    GENERAL_SYSTEM_PROMPT,
     RAG_DECISION_SYSTEM_PROMPT,
 )
+from RAG.utils import DecisionResponse
 from utils.helper import load_separated_data, load_single_file
-from utils.post_processing import choice_to_letter
+from utils.post_processing import model_output2letter
+
+response_format = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "DecisionResponse",
+        "schema": DecisionResponse.model_json_schema(),
+    },
+}
 
 
 def infer(test_case, llm, label_config, *, gate_llm=None, answer_llm=None):
+    global answer_extractor_llm
+
     # ---- Multi-Domain ----
-    if label_config.get("solver") == "multi_domain":
+    if label_config.get("tool_use") == "multi_domain":
         return solve_multi_domain(
             test_case=test_case,
             gate_llm=gate_llm,
@@ -42,10 +52,12 @@ def infer(test_case, llm, label_config, *, gate_llm=None, answer_llm=None):
         question_type=label_config.get("question_type"),
     )
 
-    if label_config["postprocess"] == "choice_to_letter":
-        return choice_to_letter(raw, test_case["choices"])
+    try:
+        answer = model_output2letter(raw, test_case["choices"])
+    except:
+        answer = ""
 
-    return raw
+    return answer
 
 
 def run_inference(
@@ -57,13 +69,13 @@ def run_inference(
 ):
     llm_cache = {}
 
-    # ---- Multi-Domain LLMs (ONCE) ----
     gate_llm = LLM_VNPTAI(
         llm_name="LLM small",
         system_prompt=RAG_DECISION_SYSTEM_PROMPT,
+        response_format=response_format,
     )
 
-    answer_llm = LLM_VNPTAI(llm_name="LLM large")
+    answer_llm = LLM_VNPTAI(llm_name="LLM large", max_completion_tokens=256)
 
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -79,12 +91,12 @@ def run_inference(
         for label, test_data in datasets:
             label_config = LABEL_REGISTRY[label]
 
-            if label_config.get("solver") != "multi_domain":
+            if label_config.get("tool_use") != "multi_domain":
                 if label not in llm_cache:
                     llm_cache[label] = build_llm(label_config, llm_name)
                 llm = llm_cache[label]
             else:
-                llm = None  # handled separately
+                llm = None
 
             for i, test_case in tqdm(
                 enumerate(test_data),
@@ -121,7 +133,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=40,
+        default=25,
         help="Number of samples to process before sleeping",
     )
 
