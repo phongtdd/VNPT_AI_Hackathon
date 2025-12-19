@@ -2,8 +2,14 @@
 set -e
 set -x
 
+input_file="${1:-private_test.json}"
 
-python3 inference.py \
-    --separated_dir data/separated_data/test_data/STEM.json \
-    --output data/prediction_STEM.csv \
-    --llm "LLM large"
+separated_dir="separated_data"
+output_file="submission.csv"
+llm="LLM large"
+
+python3 predict.py \
+    --input "$input_file" \
+    --separated_dir "$separated_dir" \
+    --output "$output_file" \
+    --llm "$llm"

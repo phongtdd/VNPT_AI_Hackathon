@@ -77,10 +77,10 @@ def solve_stem_question(
         try:
             stem_class = stem_classify_llm.get_single_answer(user_prompt)
             analysis_mode = stem_class.get("analysis_mode")
-            print(analysis_mode)
+            # print(analysis_mode)
             if analysis_mode == "ANSWER_VALIDATION":
                 result = stem_answer_driven_llm.get_single_answer(user_prompt)
-                print(result)
+                # print(result)
                 if isinstance(result, str):
                     result = json.loads(result)
 

@@ -1,0 +1,4 @@
+faiss_data/
+__pycache__/
+*.ipynb
+data/

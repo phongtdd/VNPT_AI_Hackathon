@@ -1,20 +1,19 @@
 # VNPT AI Hackathon
 
 ## Overview
-Complete pipeline for processing data, chunking, building a FAISS vector database, and running inference for efficient similarity search. The system specializes in handling multiple-choice questions (MCQs) across domains, with advanced support for STEM (Science, Technology, Engineering, Mathematics) questions using multi-phase reasoning.
+
+This pipeline provides a complete solution for processing data, chunking text, building a FAISS vector database, and running inference for efficient similarity search. It is designed to handle multiple-choice questions (MCQs) across various domains, with advanced support for STEM (Science, Technology, Engineering, and Mathematics) questions through multi-step reasoning.  
+
+The system is optimized for the Vietnamese context, enabling fast and accurate retrieval and answer generation while leveraging both retrieval-augmented and domain-adaptive strategies.
+
 
 ## Table of Contents
 - [Components](#components)
 - [Data Flow](#data-flow)
-- [STEM Processing Pipeline](#stem-processing-pipeline)
 - [General Pipeline](#general-pipeline)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Components
 - **Question Classification**: Automatically classify MCQs into labels (e.g., STEM, RAG, Precision-Critical, Multi-Domain) using LLM.
@@ -27,14 +26,14 @@ Complete pipeline for processing data, chunking, building a FAISS vector databas
 - **RAG System**: FAISS-based vector search for context retrieval.
 - **Data Processing**: Chunking, embedding, and indexing for efficient search.
 
-## Data Flow
-1. **Input**: Raw MCQ dataset (JSON with qid, question, choices, label).
+## Pipeline Flow
+1. **Input**: Raw MCQ dataset (JSON with qid, question, choices).
 2. **Classification**: Use LLM to classify questions into labels (STEM, RAG, etc.).
 3. **Separation**: Split data by label into separate files.
 4. **Inference**:
    - For STEM: Classify mode (Question-Driven/Answer-Validation), apply multi-phase reasoning, fallback if needed.
-   - For RAG: Gate decision for retrieval, retrieve context, generate answer.
-   - For others: Direct LLM prediction.
+   - For Multi-Domain: Gate decision for retrieval external content or not, then feed to LLM.
+   - For others: Direct LLM prediction with corresponding role.
 5. **Post-Processing**: Extract answer letters (A/B/C/...), handle errors.
 6. **Output**: CSV with qid and predicted answer.
 
@@ -120,6 +119,63 @@ flowchart TD
     class STEM_ENTRY,ST1,ST2,ST_OUT,ST3, stem;
     class POST,FINAL post;
 ```
+## RAG Pipeline
+
+The **Retrieval-Augmented Generation (RAG) Pipeline** answers factual questions by retrieving relevant information from external data sources.
+
+### Flow:
+1. Extract context from the original question and split it into paragraphs.  
+2. Embed the question and paragraphs using `Embedding_VNPTAI`.  
+3. Compute similarity between the question and each paragraph; keep the top-k most relevant paragraphs.  
+4. Concatenate the retrieved passages and feed them to the LLM using `SYSTEM_RAG_PROMPT` and `USER_RAG_PROMPT`.  
+5. Map the model’s output to the final choice label via [utils/post_processing.py](utils/post_processing.py).
+
+---
+
+## Multi-Domain Pipeline
+
+The **Multi-Domain Pipeline** handles heterogeneous questions, dynamically deciding whether to use RAG, and adapts responses accordingly.
+
+### Key Features:
+- **Gate Decision**: The LLM automatically determines:  
+  - **Need RAG** – whether the question can be answered using the LLM’s base knowledge or requires external information.  
+  - **Domain** – identifies the domain of the question. If supported by external knowledge, relevant content is retrieved.  
+- **Faiss Similarity Search** for retrieving relevant context.
+
+### Flow:
+1. Receive input consisting of a question and choices. Feed the question into the Gate Decision module to get `use_rag` and `domain`.  
+2. If `use_rag=True` and the domain is supported, retrieve context using Faiss similarity search.  
+3. Prompt selection:  
+   - If context exists → use `SYSTEM_RAG_PROMPT` + `USER_RAG_PROMPT` with `<INFORMATION>` to build the RAG prompt for the LLM.  
+   - If no context → fall back to `GENERAL_SYSTEM_PROMPT` without additional context.  
+4. Map the generated answer to the corresponding letter choice via post-processing.
+
+### Fallback Mechanisms:
+- Gate parsing uses robust JSON extraction; if it fails, defaults to `use_rag=False`.  
+- If retrieval returns no passages, the model continues in non-RAG mode.
+
+### Supported Domains:
+- Law  
+- Ho Chi Minh-related knowledge  
+- Medical  
+- Political science  
+- Civic knowledge  
+
+---
+
+## Precision-Critical Pipeline
+
+The **Precision-Critical Pipeline** ensures safety by refusing to answer unsafe questions. Questions classified as Precision-Critical must trigger the refusal option.
+
+### Flow:
+1. Classify questions as “Precision-Critical” for unsafe, harmful, or how-to intents.  
+2. Use `PR_SYSTEM_PROMPT` to instruct the model to strictly refuse and select the refusal choice.  
+3. Map the output text to the corresponding choice letter.
+
+### Behavioral Rules:
+- Always select the refusal option for disallowed questions.  
+- Do not generate instructions or content that could facilitate harm.  
+- Output is constrained to a single answer string; no explanations.
 
 ## STEM Processing Pipeline
 
@@ -189,8 +245,6 @@ The STEM module (`stem_solver/`) handles questions in Science, Technology, Engin
 - This pipeline ensures high accuracy by mimicking structured, human-like expert reasoning.
 
 ## Reference_data
-
-## Data Collection & Processing
 We used five external datasets to build the RAG vector search layer:
 1. Civic Knowledge: data built from Vietnamese central government resolutions (2022–2025).
 2. Ho Chi Minh: data extracted from Wikipedia documents related to Hồ Chí Minh President.
@@ -203,56 +257,67 @@ All extracted texts were cleaned and chunked, then transformed into embedding ve
 Each dataset was indexed independently using Faiss IndexFlatIP, because the overall data volume is very large and this index type provides efficient and scalable vector similarity search.
 
 **Final result:** five separate Faiss IndexFlatIP databases (civic knowledge, Hồ Chí Minh, law, medical, political science) ready for retrieval in the RAG system.
+
 ## Prerequisites
-- Python 3.8+
+- Python 3.10+
 - pip (or conda)
 - Bash shell
-- Recommended: 2GB+ free disk for indexes
+- Recommended: 10GB+ free disk for indexes
 
 ## Installation
+
+### Option 1: Using Virtual Environment (venv)
 ```bash
-git clone <repository-url>
+git clone https://github.com/phongtdd/VNPT_AI_Hackathon.git
 cd VNPT_AI_Hackathon
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Usage
-1) Chunk raw data
+### Option 2: Using Conda
 ```bash
-bash scripts/chunk.sh
+git clone https://github.com/phongtdd/VNPT_AI_Hackathon.git
+cd VNPT_AI_Hackathon
+conda create -n vnpt_ai python=3.10
+conda activate vnpt_ai
+pip install -r requirements.txt
 ```
-2) Build FAISS index
+
+### Option 3: Using Docker
 ```bash
-bash scripts/faiss.sh
+git clone https://github.com/phongtdd/VNPT_AI_Hackathon.git
+cd VNPT_AI_Hackathon
+docker build -t team_submission .  
+docker run -v /path/to/data:/app/data team_submission 
 ```
-3) Run inference
+
+## Docker Hub
+
+Pre-built Docker images are available on Docker Hub for quick deployment without local installation.
+
+### Pull and Run from Docker Hub
 ```bash
+# Pull the latest image
+docker pull sagp1012/vnpt_ai:v1
+
+# Run without GPU (CPU only)
+docker run --rm -v path/to/file/private_test.json:/code/private_test.json sagp1012/vnpt_ai:v1
+```
+
+### Run interactively (if want)
+```
+docker run -it sagp1012/vnpt_ai:v1
 bash scripts/inference.sh
 ```
 
-## Project Structure
+
+## Usage
+1) Chunk and build faiss
 ```
-VNPT_AI_Hackathon/
-├── scripts/
-│   ├── chunk.sh       # Data chunking
-│   ├── faiss.sh       # Build FAISS index
-│   └── inference.sh   # Run inference pipeline
-├── data/              # Raw and processed data
-├── models/            # Model artifacts
-├── src/               # Source code
-├── requirements.txt
-└── README.md
+bash scripts/run_preprocess.sh <dataset> [text_field] [split]
 ```
-
-## Troubleshooting
-- Ensure virtual environment is activated before running scripts.
-- Verify input data paths expected by `chunk.sh`.
-- If FAISS build fails, check that system BLAS/FAISS dependencies are installed.
-
-## Contributing
-Issues and PRs are welcome. Please include concise descriptions and tests where applicable.
-
-## License
-Specify your license (e.g., MIT) in this section.
+3) Run inference
+```bash
+bash scripts/inference.sh <file_test.json>
+```

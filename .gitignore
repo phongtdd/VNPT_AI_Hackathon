@@ -16,3 +16,4 @@ Wiki/processed_docs/*
 prediction/*
 *.jsonl
 .venv
+faiss_data/
