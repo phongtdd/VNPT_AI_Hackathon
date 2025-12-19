@@ -1,6 +1,7 @@
 from core.llm_interface import LLM_VNPTAI
 from prompt.agent_prompt import AE_PROMPT
 
+
 class LLM_AnswerExtractor(LLM_VNPTAI):
     def __init__(
         self,
@@ -11,7 +12,7 @@ class LLM_AnswerExtractor(LLM_VNPTAI):
         top_k=0,
         n=1,
         max_completion_tokens=64,
-        response_format= {"type": "json_object"}
+        response_format={"type": "json_object"},
     ):
         super().__init__(
             llm_name=llm_name,
@@ -21,7 +22,7 @@ class LLM_AnswerExtractor(LLM_VNPTAI):
             top_k=top_k,
             n=n,
             max_completion_tokens=max_completion_tokens,
-            response_format=response_format
+            response_format=response_format,
         )
 
     def get_single_answer(self, input: str) -> str:
