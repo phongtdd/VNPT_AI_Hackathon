@@ -39,6 +39,7 @@ Complete pipeline for processing data, chunking, building a FAISS vector databas
 6. **Output**: CSV with qid and predicted answer.
 
 ## General Pipeline
+```mermaid
 flowchart TD
 
     %% Input
@@ -118,7 +119,7 @@ flowchart TD
     class MD_ENTRY,C,L1,S,D,L2,R,MD_OUT md;
     class STEM_ENTRY,ST1,ST2,ST_OUT,ST3, stem;
     class POST,FINAL post;
-
+```
 
 ## STEM Processing Pipeline
 
