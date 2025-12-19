@@ -201,7 +201,7 @@ Only the 'text' field was extracted from each dataset type for further processin
 The extracted texts were cleaned and chunked, then converted into embedding vectors.
 Each dataset was indexed separately using Faiss IndexFlatIP, chosen because the total data volume is extremely large and this index type supports efficient scalable similarity search.
 
-Final output: three independent IndexFlatIP vector databases (legal, medical, resolutions) ready for RAG retrieval.
+**Final output**: three independent IndexFlatIP vector databases (legal, medical, resolutions) ready for RAG retrieval.
 ## Prerequisites
 - Python 3.8+
 - pip (or conda)
