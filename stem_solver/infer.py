@@ -7,10 +7,16 @@ import os
 from stem_solver.stem import LLMStem
 from prompt.agent_prompt import STEM_CLASSIFY_PROMPT, STEM_PROMPT_QUESTION_DRIVEN, STEM_PROMPT_ANSWER_VALIDATION, STEM_SECOND_THINK
 
-def run_stem_infer(    
-    test_data_path,
-    output_path
+def run_stem_infer(
+    test_data_path: str,
+    output_path: str,
+    mode: Literal["strict", "allow_no_answer"] = "strict"
     ):
+    """
+    mode:
+    - 'strict': bắt buộc chọn 1 đáp án trong choices
+    - 'allow_no_answer': cho phép kết luận không có đáp án đúng
+    """
     
     llm_name = "LLM large"
 
@@ -47,7 +53,7 @@ def run_stem_infer(
         response_format= {"type": "json_object"}
     )
     
-    data=pd.read_json("classified_test/STEM.json")
+    data=pd.read_json(test_data_path)
     stem_data = data[data['label']=='STEM'].reset_index(drop=True)
     print(len(stem_data))
     
@@ -140,6 +146,33 @@ def run_stem_infer(
 
                     print(json.dumps(result, ensure_ascii=False, indent=2))
                     prediction = result["PHASE_4"]["final_answer"]
+                    if prediction == "X":
+                        if mode == "strict":
+                            # fallback
+                            stem_2nd = LLMStem(
+                                llm_name=llm_name,
+                                system_prompt=STEM_SECOND_THINK,
+                                temperature=0.1,
+                                top_p=0.9,
+                                top_k=0,
+                                n=1,
+                                max_completion_tokens=4096,
+                                response_format= {"type": "json_object"}
+                            )
+
+                            second_input = json.dumps(
+                                {
+                                    "question": test["question"],
+                                    "choices": test["choices"],
+                                }
+                            )
+                            
+                            result_2nd = stem_2nd.get_single_answer(second_input)
+                            print(json.dumps(result_2nd, ensure_ascii=False, indent=2))
+                        else:
+                            # allow_no_answer
+                            save_prediction_csv(current_qid, prediction)
+                            break
 
                     save_prediction_csv(current_qid, prediction)
                     break
