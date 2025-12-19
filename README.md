@@ -191,17 +191,18 @@ The STEM module (`stem_solver/`) handles questions in Science, Technology, Engin
 ## Reference_data
 
 ## Data Collection & Processing
-We used three external datasets to build the RAG vector search layer:
-- Hugging Face – VTSNLP/base_vbpl_full (135k Vietnamese legal documents),
-- Hugging Face – VTSNLP/base_yTe (65.2k Vietnamese medical documents),
-- Crawled thuvienphapluat data (720 resolutions, 2022–2025).
+We used five external datasets to build the RAG vector search layer:
+1. Civic Knowledge: data built from Vietnamese central government resolutions (2022–2025).
+2. Ho Chi Minh: data extracted from Wikipedia documents related to Hồ Chí Minh President.
+3. Law: data from Hugging Face – VTSNLP/base_vbpl_full (135k legal documents).
+4. Medical: data from Hugging Face – VTSNLP/base_yTe (65.2k medical documents).
+5. Political Science: lecture materials from the “General Political Theory” course of Thai Nguyen University.
 
-The datasets were not merged into a single structure.
-Only the 'text' field was extracted from each dataset type for further processing.
-The extracted texts were cleaned and chunked, then converted into embedding vectors.
-Each dataset was indexed separately using Faiss IndexFlatIP, chosen because the total data volume is extremely large and this index type supports efficient scalable similarity search.
+The datasets were not merged into a single structure. Only the text field was extracted from each dataset for processing.
+All extracted texts were cleaned and chunked, then transformed into embedding vectors.
+Each dataset was indexed independently using Faiss IndexFlatIP, because the overall data volume is very large and this index type provides efficient and scalable vector similarity search.
 
-**Final output**: three independent IndexFlatIP vector databases (legal, medical, resolutions) ready for RAG retrieval.
+**Final result:** five separate Faiss IndexFlatIP databases (civic knowledge, Hồ Chí Minh, law, medical, political science) ready for retrieval in the RAG system.
 ## Prerequisites
 - Python 3.8+
 - pip (or conda)
