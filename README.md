@@ -13,6 +13,7 @@ The system is optimized for the Vietnamese context, enabling fast and accurate r
 - [General Pipeline](#general-pipeline)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
+- [Docker Hub](#docker-hub)
 - [Usage](#usage)
 
 ## Components
