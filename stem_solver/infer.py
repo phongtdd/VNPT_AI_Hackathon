@@ -58,11 +58,12 @@ def initialize_llm(llm_name = "LLM large"):
 def solve_stem_question(
     question,
     choices,
+    llm_name="LLM large",
     mode: Literal["strict", "allow_no_answer"] = "strict",
     max_retries = 1,
     ) -> str:
 
-    stem_classify_llm, stem_question_driven_llm, stem_answer_driven_llm, stem_2nd = initialize_llm()
+    stem_classify_llm, stem_question_driven_llm, stem_answer_driven_llm, stem_2nd = initialize_llm(llm_name=llm_name)
     user_prompt = json.dumps(
         {
             "question": question,
@@ -76,13 +77,14 @@ def solve_stem_question(
         try:
             stem_class = stem_classify_llm.get_single_answer(user_prompt)
             analysis_mode = stem_class.get("analysis_mode")
+            print(analysis_mode)
             if analysis_mode == "ANSWER_VALIDATION":
                 result = stem_answer_driven_llm.get_single_answer(user_prompt)
-
+                print(result)
                 if isinstance(result, str):
                     result = json.loads(result)
 
-                prediction = result["PHASE_3"]["final_answer"]
+                prediction = result["PHASE_4"]["final_answer"]
 
                 return prediction
                 
