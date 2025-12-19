@@ -1,8 +1,5 @@
 import numpy as np
 
-from core.llm_interface import Embedding_VNPTAI
-
-embedding_model = Embedding_VNPTAI(embedding_name="LLM embedings")
 
 
 def _split_paragraph(text):
@@ -18,7 +15,9 @@ def _cosine_similarity(a, b):
 
 
 def top_similarity(question, context, top_k=None):
-    global embedding_model
+    from core.llm_interface import Embedding_VNPTAI
+
+    embedding_model = Embedding_VNPTAI(embedding_name="LLM embedings")
     paragraphs = _split_paragraph(context)
 
     # Get embedding for question

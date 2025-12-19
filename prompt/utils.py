@@ -1,10 +1,10 @@
 from prompt.agent_prompt import GENERAL_USER_PROMPT, USER_RAG_PROMPT
-
+from RAG.get_top_param import top_similarity
 
 def general_prompt(ex: dict[str, str]):
-    questions = ex["question"]
+    question = ex["question"]
     choices = ex["choices"]
-    user_prompt = GENERAL_USER_PROMPT.format(questions=questions, choices=choices)
+    user_prompt = GENERAL_USER_PROMPT.format(question=question, choices=choices)
 
     return user_prompt
 
@@ -19,7 +19,9 @@ def rag_prompt(ex: dict[str, str]) -> str:
     content = questions[start_index:end_index].strip()
     question = questions[end_index:].strip()
 
+    top_paras = top_similarity(question, content, top_k=3)
+    retrieved_content = "\n\n".join([para for para, score in top_paras])
     user_prompt = USER_RAG_PROMPT.format(
-        content=content, question=question, choices=choices
+        content=retrieved_content, question=question, choices=choices
     )
     return user_prompt
